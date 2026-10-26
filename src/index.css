@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  /* Charte Graphique EMF Sangmelima : Bordeaux, Or, Blanc */
+  --emf-bordeaux-dark: #4A0E17;
+  --emf-bordeaux-primary: #6E1325;
+  --emf-bordeaux-hover: #8C182F;
+  --emf-bordeaux-light: #FAF0F2;
+  --emf-gold: #C99B2E;
+  --emf-gold-hover: #D4AF37;
+  --emf-gold-light: #FBF6E9;
+  --emf-white: #FFFFFF;
+  --emf-bg: #FCFCFD;
+
+  /* Rétro-compatibilité : mapper les anciennes variables bleues vers Bordeaux */
+  --emf-blue-primary: #6E1325;
+  --emf-blue-dark: #4A0E17;
+}
+
+body {
+  background-color: var(--emf-bg);
+  color: #1e293b;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 12mm 12mm;
+  }
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 11pt !important;
+  }
+  .no-print, header, aside, nav, button:not(.print-include) {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .printable-document {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .page-break-avoid {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+}
