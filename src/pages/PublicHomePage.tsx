@@ -31,6 +31,7 @@ import {
   Camera,
   Smartphone,
   Image as ImageIcon,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -1559,17 +1560,17 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
               <button
                 onClick={() => setIsFooterEditorOpen(true)}
                 className="text-xs px-3.5 py-1.5 rounded-xl bg-[#C99B2E] hover:bg-amber-400 text-[#4A0E17] font-black transition flex items-center space-x-1.5 shadow-sm cursor-pointer"
-                title="Modifier les coordonnées et l'agenda du pied de page"
+                title="Modifier les coordonnées et informations de contact du pied de page"
               >
                 <Edit2 className="w-3.5 h-3.5 text-[#4A0E17]" />
-                <span>Modifier Coordonnées & Agenda</span>
+                <span>Modifier les Coordonnées & Liens</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Grille Principale à 4 Colonnes */}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10 text-xs">
+        {/* Grille Principale à 3 Colonnes */}
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 mb-10 text-xs">
           {/* Colonne 1 : Identité & Mission Spirituelle */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2.5">
@@ -1678,126 +1679,100 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
             </div>
           </div>
 
-          {/* Colonne 2 : Horaires des Cultes & Rendez-vous Hebdomadaires (Dynamique Synchronisé) */}
+          {/* Colonne 2 : Liens Rapides & Services Paroissiaux */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-bold uppercase tracking-wider text-[#C99B2E] text-[11px] flex items-center space-x-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#C99B2E]" />
-                <span>Horaires des Cultes</span>
-              </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                {(activeWeeklyPrograms || []).length} cultes
-              </span>
-            </div>
-
-            {(activeWeeklyPrograms || []).length > 0 ? (
-              <ul className="space-y-2 text-slate-300">
-                {(activeWeeklyPrograms || []).map((prog) => (
-                  <li
-                    key={prog?.id || Math.random()}
-                    className="p-2 rounded-xl bg-slate-800/70 border border-slate-700/60 hover:border-[#C99B2E]/50 transition group"
-                  >
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-black text-amber-300 uppercase tracking-wide">
-                        {prog?.dayOfWeek || 'Dimanche'}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-bold flex items-center space-x-1">
-                        <Clock className="w-2.5 h-2.5 text-[#C99B2E]" />
-                        <span>{prog?.time || '09h00'}</span>
-                      </span>
-                    </div>
-                    <p className="font-bold text-white text-xs mt-0.5 group-hover:text-amber-200 transition">
-                      {prog?.title || 'Culte'}
-                    </p>
-                    {prog?.location && (
-                      <p className="text-[10px] text-slate-400 flex items-center space-x-1 mt-0.5">
-                        <MapPin className="w-2.5 h-2.5 text-slate-500" />
-                        <span className="truncate">{prog.location}</span>
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700 text-slate-400 text-xs">
-                Aucun culte régulier configuré pour le moment.
-              </div>
-            )}
-
-            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'PASTEUR') && (
-              <button
-                onClick={() => {
-                  setProgramsModalCreateMode(false);
-                  setIsManageProgramsOpen(true);
-                }}
-                className="text-[11px] text-[#C99B2E] hover:text-amber-300 font-bold transition flex items-center space-x-1 pt-1 cursor-pointer"
-              >
-                <span>+ Gérer les programmes hebdomadaires</span>
-              </button>
-            )}
+            <span className="font-bold uppercase tracking-wider text-[#C99B2E] text-[11px] block">
+              Navigation & Services Paroissiaux
+            </span>
+            <ul className="space-y-2 text-slate-300">
+              <li>
+                <a
+                  href="#hero"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center space-x-2 text-slate-300 hover:text-[#C99B2E] transition group"
+                >
+                  <ArrowRight className="w-3 h-3 text-[#C99B2E] group-hover:translate-x-1 transition" />
+                  <span>Accueil & Présentation de l'Église</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#ministries"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById('ministries');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center space-x-2 text-slate-300 hover:text-[#C99B2E] transition group"
+                >
+                  <ArrowRight className="w-3 h-3 text-[#C99B2E] group-hover:translate-x-1 transition" />
+                  <span>Nos Départements & Ministères</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#prayer-requests"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById('prayer-requests');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center space-x-2 text-slate-300 hover:text-[#C99B2E] transition group"
+                >
+                  <ArrowRight className="w-3 h-3 text-[#C99B2E] group-hover:translate-x-1 transition" />
+                  <span>Requêtes de Prière & Intercession</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#testimonials"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById('testimonials');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center space-x-2 text-slate-300 hover:text-[#C99B2E] transition group"
+                >
+                  <ArrowRight className="w-3 h-3 text-[#C99B2E] group-hover:translate-x-1 transition" />
+                  <span>Témoignages & Louanges des Fidèles</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#latest-service-media"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById('latest-service-media');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center space-x-2 text-slate-300 hover:text-[#C99B2E] transition group"
+                >
+                  <ArrowRight className="w-3 h-3 text-[#C99B2E] group-hover:translate-x-1 transition" />
+                  <span>Médiathèque, Photos & Prédications</span>
+                </a>
+              </li>
+              <li className="pt-1">
+                <button
+                  onClick={() => {
+                    if (onOpenAuth) {
+                      onOpenAuth('login');
+                    } else {
+                      window.location.hash = '#dashboard';
+                    }
+                  }}
+                  className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-[#C99B2E] hover:text-[#4A0E17] text-white font-bold transition border border-white/20 cursor-pointer"
+                >
+                  <Lock className="w-3 h-3 text-[#C99B2E] hover:text-[#4A0E17]" />
+                  <span>Espace Sécurisé Membres & Dirigeants</span>
+                </button>
+              </li>
+            </ul>
           </div>
 
-          {/* Colonne 3 : Agenda & Prochains Événements (Dynamique Synchronisé) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-bold uppercase tracking-wider text-[#C99B2E] text-[11px] flex items-center space-x-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#C99B2E]" />
-                <span>Agenda Paroissial</span>
-              </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-400/20 text-blue-300 border border-blue-400/30">
-                {(events || []).length} événements
-              </span>
-            </div>
-
-            {(upcomingEvents || []).length > 0 ? (
-              <ul className="space-y-2 text-slate-300">
-                {(upcomingEvents || []).map((evt) => (
-                  <li
-                    key={evt?.id || Math.random()}
-                    className="p-2 rounded-xl bg-slate-800/70 border border-slate-700/60 hover:border-blue-400/50 transition group"
-                  >
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-black text-sky-300">
-                        {formatDateDouala(evt?.startDate || new Date().toISOString())}
-                      </span>
-                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300">
-                        {evt?.type || 'ÉVÉNEMENT'}
-                      </span>
-                    </div>
-                    <p className="font-bold text-white text-xs mt-0.5 group-hover:text-sky-200 transition">
-                      {evt?.title || 'Événement'}
-                    </p>
-                    {evt?.location && (
-                      <p className="text-[10px] text-slate-400 flex items-center space-x-1 mt-0.5">
-                        <MapPin className="w-2.5 h-2.5 text-slate-500" />
-                        <span className="truncate">{evt.location}</span>
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700 text-slate-400 text-xs">
-                Tous les rassemblements se tiennent selon les cultes hebdomadaires ci-contre.
-              </div>
-            )}
-
-            <a
-              href="#events"
-              onClick={(e) => {
-                e.preventDefault();
-                setEventsDisplayMode('calendar');
-                const el = document.getElementById('events');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="text-[11px] text-sky-400 hover:text-sky-300 font-bold transition flex items-center space-x-1 pt-1 cursor-pointer"
-            >
-              <span>Consulter le calendrier interactif</span>
-              <ArrowRight className="w-3 h-3" />
-            </a>
-          </div>
-
-          {/* Colonne 4 : Coordonnées Officielles & Contact */}
+          {/* Colonne 3 : Coordonnées Officielles & Contact */}
           <div className="space-y-3">
             <span className="font-bold uppercase tracking-wider text-[#C99B2E] text-[11px] block">
               Contact & Permanence

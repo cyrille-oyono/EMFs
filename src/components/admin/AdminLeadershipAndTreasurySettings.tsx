@@ -19,6 +19,9 @@ import {
   Hash,
   FileText,
   BadgeCheck,
+  Copy,
+  Check,
+  RefreshCw,
 } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -70,6 +73,7 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
   const [officers, setOfficers] = useState<KeyOfficerData[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, OfficerFieldErrors>>({});
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+  const [copiedOfficerId, setCopiedOfficerId] = useState<string | null>(null);
 
   // Treasury State
   const [treasury, setTreasury] = useState<TreasurySettings>({
@@ -276,12 +280,38 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
     }
   };
 
-  const togglePasswordVisibility = (id: string) => {
-    setShowPasswordMap((prev) => ({ ...prev, [id]: !prev[id] }));
+  const generatePasswordForOfficer = (officerId: string) => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!#@';
+    let pwd = '';
+    for (let i = 0; i < 10; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const newPwd = pwd + '2026!';
+    handleOfficerChange(officerId, 'password', newPwd);
+    setShowPasswordMap((prev) => ({ ...prev, [officerId]: true }));
+  };
+
+  const handleCopyOfficerCredentials = (officer: KeyOfficerData) => {
+    const pwd = officer.password?.trim() || officer.currentPassword || 'Non défini';
+    const text = `⛪ *Identifiants Officiels EMF SMART — ${officer.role}*\nTitulaire : ${officer.firstName} ${officer.lastName}\nEmail de connexion : ${officer.email}\nMot de passe : ${pwd}\nApplication : ${typeof window !== 'undefined' ? window.location.origin : 'https://emf-sangmelima.org'}`;
+    navigator.clipboard.writeText(text);
+    setCopiedOfficerId(officer.id);
+    showNotification('success', `✓ Identifiants de connexion copiés pour ${officer.role} (${officer.firstName}) !`);
+    setTimeout(() => setCopiedOfficerId(null), 3500);
+  };
+
+  const togglePasswordVisibility = (officerId: string) => {
+    setShowPasswordMap((prev) => ({ ...prev, [officerId]: !prev[officerId] }));
   };
 
   const getOfficerBadge = (role: Role) => {
     switch (role) {
+      case 'ADMIN':
+        return {
+          title: 'Administrateur Général',
+          desc: 'Gestion globale de l’application, sécurité, utilisateurs et configurations',
+          badgeColor: 'bg-[#6E1325]/15 text-[#6E1325] border-[#6E1325]/30',
+        };
       case 'PASTEUR':
         return {
           title: 'Pasteur de la Paroisse',
@@ -396,28 +426,30 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
           <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-amber-900">
             <Sparkles className="w-4 h-4 text-[#C99B2E] flex-shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold">Gestion des responsables principaux de Sangmelima :</span>
+              <span className="font-bold">Configuration des 4 Rôles de Direction de Sangmelima :</span>
               <p className="mt-0.5 text-[11px] text-amber-800">
-                Vous pouvez modifier ici les noms, coordonnées téléphoniques, adresses email et mots de passe
-                de connexion pour le <strong>Pasteur</strong>, le <strong>Secrétaire</strong> et le <strong>Trésorier</strong>.
-                Chaque champ dispose d’une validation stricte et les modifications sont répercutées en temps réel.
+                Vous pouvez modifier ici les identifiants officiels (<strong>email de connexion</strong> et <strong>mot de passe</strong>)
+                ainsi que les coordonnées téléphoniques et le nom pour l'<strong>Administrateur</strong>, le <strong>Pasteur</strong>, 
+                le <strong>Secrétaire</strong> et le <strong>Trésorier</strong>.
+                Chaque modification est immédiatement active pour la connexion.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {officers.map((officer) => {
               const badge = getOfficerBadge(officer.role);
               const isSaving = savingOfficerId === officer.id;
               const isPassVisible = !!showPasswordMap[officer.id];
               const errors = fieldErrors[officer.id] || {};
+              const isCopied = copiedOfficerId === officer.id;
 
               return (
                 <div
                   key={officer.id}
-                  className="bg-slate-50/70 rounded-3xl border border-slate-200 p-5 space-y-4 shadow-xs hover:border-[#4A0E17]/30 transition flex flex-col justify-between"
+                  className="bg-slate-50/70 rounded-3xl border border-slate-200 p-4 space-y-4 shadow-xs hover:border-[#4A0E17]/40 transition flex flex-col justify-between"
                 >
-                  <div className="space-y-4">
+                  <div className="space-y-3.5">
                     {/* Officer Header Card */}
                     <div className="border-b border-slate-200 pb-3">
                       <div className="flex items-center justify-between">
@@ -439,7 +471,7 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
                       <h3 className="text-sm font-black text-[#4A0E17] mt-2">
                         {officer.firstName || 'Responsable'} {officer.lastName || ''}
                       </h3>
-                      <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                      <p className="text-[11px] text-slate-500 leading-tight mt-0.5 line-clamp-2">
                         {badge.desc}
                       </p>
                     </div>
@@ -456,7 +488,7 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
                             type="text"
                             value={officer.firstName}
                             onChange={(e) => handleOfficerChange(officer.id, 'firstName', e.target.value)}
-                            className={`w-full px-3 py-2 bg-white rounded-xl border outline-none text-xs font-semibold ${
+                            className={`w-full px-2.5 py-2 bg-white rounded-xl border outline-none text-xs font-semibold ${
                               errors.firstName
                                 ? 'border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/30'
                                 : 'border-slate-300 focus:ring-2 focus:ring-[#6E1325]'
@@ -471,13 +503,13 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
                         </div>
                         <div>
                           <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            Nom de famille *
+                            Nom *
                           </label>
                           <input
                             type="text"
                             value={officer.lastName}
                             onChange={(e) => handleOfficerChange(officer.id, 'lastName', e.target.value)}
-                            className={`w-full px-3 py-2 bg-white rounded-xl border outline-none text-xs font-semibold ${
+                            className={`w-full px-2.5 py-2 bg-white rounded-xl border outline-none text-xs font-semibold ${
                               errors.lastName
                                 ? 'border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/30'
                                 : 'border-slate-300 focus:ring-2 focus:ring-[#6E1325]'
@@ -496,13 +528,13 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
                       <div>
                         <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center space-x-1">
                           <Phone className="w-3 h-3 text-[#C99B2E]" />
-                          <span>Téléphone mobile (Cameroun) *</span>
+                          <span>Téléphone (Cameroun) *</span>
                         </label>
                         <input
                           type="text"
                           value={officer.phone}
                           onChange={(e) => handleOfficerChange(officer.id, 'phone', e.target.value)}
-                          className={`w-full px-3 py-2 bg-white rounded-xl border outline-none text-xs font-mono font-bold ${
+                          className={`w-full px-2.5 py-2 bg-white rounded-xl border outline-none text-xs font-mono font-bold ${
                             errors.phone
                               ? 'border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/30'
                               : 'border-slate-300 focus:ring-2 focus:ring-[#6E1325]'
@@ -516,17 +548,17 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
                         )}
                       </div>
 
-                      {/* Email */}
+                      {/* Email (Login username) */}
                       <div>
                         <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center space-x-1">
                           <Mail className="w-3 h-3 text-[#6E1325]" />
-                          <span>Adresse Email (Identifiant de connexion) *</span>
+                          <span>Email de connexion *</span>
                         </label>
                         <input
                           type="email"
                           value={officer.email}
                           onChange={(e) => handleOfficerChange(officer.id, 'email', e.target.value)}
-                          className={`w-full px-3 py-2 bg-white rounded-xl border outline-none text-xs font-medium ${
+                          className={`w-full px-2.5 py-2 bg-white rounded-xl border outline-none text-xs font-mono font-medium ${
                             errors.email
                               ? 'border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/30'
                               : 'border-slate-300 focus:ring-2 focus:ring-[#6E1325]'
@@ -540,7 +572,7 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
                         )}
                       </div>
 
-                      {/* Current Password Display & New Password Input */}
+                      {/* Password Management Block */}
                       <div className="p-3 bg-white rounded-2xl border border-slate-200 space-y-2">
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="font-bold text-slate-600 flex items-center space-x-1">
@@ -566,19 +598,30 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            Définir un nouveau mot de passe (optionnel) :
-                          </label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[11px] font-bold text-slate-700">
+                              Nouveau mot de passe :
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => generatePasswordForOfficer(officer.id)}
+                              className="text-[10px] font-bold text-[#6E1325] hover:underline flex items-center space-x-1 cursor-pointer"
+                              title="Générer un mot de passe aléatoire sécurisé"
+                            >
+                              <RefreshCw className="w-2.5 h-2.5 text-[#C99B2E]" />
+                              <span>Générer</span>
+                            </button>
+                          </div>
                           <input
                             type={isPassVisible ? 'text' : 'password'}
                             value={officer.password}
                             onChange={(e) => handleOfficerChange(officer.id, 'password', e.target.value)}
-                            className={`w-full px-3 py-1.5 bg-slate-50 rounded-xl border outline-none text-xs font-mono ${
+                            className={`w-full px-2.5 py-1.5 bg-slate-50 rounded-xl border outline-none text-xs font-mono font-bold ${
                               errors.password
                                 ? 'border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/30'
                                 : 'border-slate-300 focus:ring-2 focus:ring-[#6E1325]'
                             }`}
-                            placeholder="Au moins 6 caractères"
+                            placeholder="Nouveau mot de passe (min 6 car.)"
                           />
                           {errors.password && (
                             <span className="text-[10px] text-red-600 font-bold block mt-1">
@@ -591,14 +634,14 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
                       {/* Status */}
                       <div>
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          Statut du compte :
+                          Statut d'accès :
                         </label>
                         <select
                           value={officer.status}
                           onChange={(e) =>
                             handleOfficerChange(officer.id, 'status', e.target.value as any)
                           }
-                          className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#6E1325] outline-none text-xs font-bold"
+                          className="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#6E1325] outline-none text-xs font-bold"
                         >
                           <option value="ACTIF">Compte Actif (Accès autorisé)</option>
                           <option value="INACTIF">Compte Inactif (Accès restreint)</option>
@@ -607,16 +650,37 @@ export const AdminLeadershipAndTreasurySettings: React.FC<AdminLeadershipAndTrea
                     </div>
                   </div>
 
-                  {/* Save Button */}
-                  <button
-                    type="button"
-                    disabled={isSaving}
-                    onClick={() => handleSaveOfficer(officer)}
-                    className="w-full py-2.5 bg-[#4A0E17] hover:bg-[#6E1325] text-white font-bold rounded-xl shadow transition flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50 mt-4"
-                  >
-                    <Save className="w-3.5 h-3.5 text-[#C99B2E]" />
-                    <span>{isSaving ? 'Enregistrement...' : `Enregistrer ${officer.role}`}</span>
-                  </button>
+                  {/* Buttons: Save & Copy */}
+                  <div className="pt-3 border-t border-slate-200/80 space-y-2">
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={() => handleSaveOfficer(officer)}
+                      className="w-full py-2.5 bg-[#4A0E17] hover:bg-[#6E1325] text-white font-bold rounded-xl shadow transition flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50 text-xs"
+                    >
+                      <Save className="w-3.5 h-3.5 text-[#C99B2E]" />
+                      <span>{isSaving ? 'Enregistrement...' : `Enregistrer ${officer.role}`}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopyOfficerCredentials(officer)}
+                      className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer text-[11px]"
+                      title="Copier les identifiants pour envoi par WhatsApp ou SMS"
+                    >
+                      {isCopied ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          <span className="text-emerald-700 font-bold">Identifiants copiés !</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3 text-slate-500" />
+                          <span>Copier accès (WhatsApp / SMS)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               );
             })}

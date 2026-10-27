@@ -513,14 +513,14 @@ export const Storage = {
   },
 
   getKeyOfficers(): (User & { currentPassword?: string })[] {
-    const roles: Role[] = ['PASTEUR', 'SECRÉTAIRE', 'TRÉSORIER'];
+    const roles: Role[] = ['ADMIN', 'PASTEUR', 'SECRÉTAIRE', 'TRÉSORIER'];
     const officers = db.users
       .filter((u) => roles.includes(u.role))
       .map((u) => ({
         ...u,
         currentPassword: u.passwordHash,
       }));
-    const orderMap: Record<string, number> = { PASTEUR: 1, SECRÉTAIRE: 2, TRÉSORIER: 3 };
+    const orderMap: Record<string, number> = { ADMIN: 1, PASTEUR: 2, SECRÉTAIRE: 3, TRÉSORIER: 4 };
     return officers.sort((a, b) => (orderMap[a.role] || 99) - (orderMap[b.role] || 99));
   },
 

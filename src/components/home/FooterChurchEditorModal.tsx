@@ -442,31 +442,37 @@ export const FooterChurchEditorModal: React.FC<FooterChurchEditorModalProps> = (
               </div>
 
               {/* Mini Footer Render */}
-              <div className="p-6 bg-[#071d37] text-slate-300 rounded-2xl border border-[#6E1325] space-y-6">
+              <div className="p-6 bg-[#4A0E17] text-slate-300 rounded-2xl border border-[#C99B2E]/40 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
                   {/* Col 1 */}
                   <div className="space-y-2">
                     <span className="font-extrabold text-white text-sm block">{formData.churchName}</span>
-                    <p className="text-slate-400 text-[11px] leading-relaxed">{formData.slogan}</p>
-                    <p className="text-slate-500 text-[10px]">{formData.address}</p>
+                    <p className="text-slate-300 text-[11px] leading-relaxed">{formData.slogan}</p>
+                    <p className="text-amber-200/80 text-[10px]">{formData.address}</p>
                   </div>
 
                   {/* Col 2 */}
                   <div className="space-y-2">
                     <span className="font-bold uppercase tracking-wider text-[#C99B2E] text-[11px] block">
-                      Cultes Réguliers ({weeklyPrograms.filter((p) => p.isActive).length})
+                      Navigation & Liens Paroissiaux
                     </span>
                     <ul className="space-y-1 text-slate-300 text-[11px]">
-                      {weeklyPrograms
-                        .filter((p) => p.isActive)
-                        .slice(0, 4)
-                        .map((p) => (
-                          <li key={p.id} className="flex items-center space-x-1.5 truncate">
-                            <span className="font-black text-[#C99B2E]">{p.dayOfWeek} :</span>
-                            <span className="text-slate-400">{p.time}</span>
-                            <span className="truncate">({p.title})</span>
-                          </li>
-                        ))}
+                      <li className="flex items-center space-x-1.5 truncate">
+                        <ArrowRight className="w-3 h-3 text-[#C99B2E] shrink-0" />
+                        <span>Accueil & Présentation de l'Église</span>
+                      </li>
+                      <li className="flex items-center space-x-1.5 truncate">
+                        <ArrowRight className="w-3 h-3 text-[#C99B2E] shrink-0" />
+                        <span>Nos Départements & Ministères</span>
+                      </li>
+                      <li className="flex items-center space-x-1.5 truncate">
+                        <ArrowRight className="w-3 h-3 text-[#C99B2E] shrink-0" />
+                        <span>Requêtes de Prière & Intercession</span>
+                      </li>
+                      <li className="flex items-center space-x-1.5 truncate">
+                        <ArrowRight className="w-3 h-3 text-[#C99B2E] shrink-0" />
+                        <span>Médiathèque & Prédications</span>
+                      </li>
                     </ul>
                   </div>
 
