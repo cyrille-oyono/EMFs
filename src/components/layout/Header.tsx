@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { ChurchLogo } from '../common/ChurchLogo';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { ThemeToggle } from '../common/ThemeToggle';
 
 interface HeaderProps {
   onToggleMobileMenu: () => void;
@@ -151,6 +152,9 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
+          {/* Bouton Mode Sombre / Clair */}
+          <ThemeToggle variant="icon" />
+
           {/* Notifications Bell */}
           <NotificationBell
             onNavigate={onNavigate}
@@ -181,13 +185,13 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-slate-200 text-slate-800 z-50 p-2 animate-in fade-in">
-                  <div className="px-3 py-2.5 border-b border-slate-100 bg-slate-50/50 rounded-xl mb-1">
-                    <p className="text-xs font-bold text-slate-900">
+                <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-[#160407] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#4A0E17] text-slate-800 dark:text-rose-100 z-50 p-2 animate-in fade-in">
+                  <div className="px-3 py-2.5 border-b border-slate-100 dark:border-[#380C14] bg-slate-50/50 dark:bg-[#22070D] rounded-xl mb-1">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
                       {currentUser.firstName} {currentUser.lastName}
                     </p>
-                    <p className="text-[11px] text-slate-500 truncate">{currentUser.email}</p>
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-[#4A0E17] text-white">
+                    <p className="text-[11px] text-slate-500 dark:text-rose-200/70 truncate">{currentUser.email}</p>
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-[#4A0E17] dark:bg-[#6E1325] text-white">
                       Rôle : {currentUser.role}
                     </span>
                   </div>
@@ -199,7 +203,7 @@ export const Header: React.FC<HeaderProps> = ({
                           handleAdminSave();
                           setShowUserMenu(false);
                         }}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-[#4A0E17] bg-amber-50 hover:bg-amber-100 rounded-lg flex items-center space-x-2 transition cursor-pointer border border-amber-200"
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-[#4A0E17] dark:text-amber-300 bg-amber-50 dark:bg-[#2A1015] hover:bg-amber-100 dark:hover:bg-[#38151C] rounded-lg flex items-center space-x-2 transition cursor-pointer border border-amber-200 dark:border-[#C99B2E]/30"
                       >
                         <Save className="w-3.5 h-3.5 text-[#C99B2E]" />
                         <span>Enregistrer dans Supabase</span>
@@ -211,9 +215,9 @@ export const Header: React.FC<HeaderProps> = ({
                         onNavigate('settings');
                         setShowUserMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 rounded-lg flex items-center space-x-2 transition cursor-pointer"
+                      className="w-full text-left px-3 py-2 text-xs text-slate-700 dark:text-rose-100 hover:bg-slate-100 dark:hover:bg-[#26080F] rounded-lg flex items-center space-x-2 transition cursor-pointer"
                     >
-                      <Settings className="w-3.5 h-3.5 text-slate-400" />
+                      <Settings className="w-3.5 h-3.5 text-slate-400 dark:text-rose-300/70" />
                       <span>Mon profil & paramètres</span>
                     </button>
 
@@ -223,12 +227,20 @@ export const Header: React.FC<HeaderProps> = ({
                           onNavigate('audit');
                           setShowUserMenu(false);
                         }}
-                        className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 rounded-lg flex items-center space-x-2 transition cursor-pointer"
+                        className="w-full text-left px-3 py-2 text-xs text-slate-700 dark:text-rose-100 hover:bg-slate-100 dark:hover:bg-[#26080F] rounded-lg flex items-center space-x-2 transition cursor-pointer"
                       >
-                        <FileText className="w-3.5 h-3.5 text-slate-400" />
+                        <FileText className="w-3.5 h-3.5 text-slate-400 dark:text-rose-300/70" />
                         <span>Journal d’audit</span>
                       </button>
                     )}
+
+                    {/* Thème clair / sombre */}
+                    <div className="pt-2 pb-1 px-1 border-t border-slate-100 dark:border-[#380C14]">
+                      <div className="text-[10px] font-bold text-slate-400 dark:text-rose-200/60 uppercase tracking-wider px-2 mb-1">
+                        Mode d'affichage
+                      </div>
+                      <ThemeToggle variant="segmented" className="w-full justify-between" />
+                    </div>
 
                     <button
                       onClick={() => {
@@ -236,7 +248,7 @@ export const Header: React.FC<HeaderProps> = ({
                         setShowUserMenu(false);
                         onNavigate('public-home');
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-lg flex items-center space-x-2 mt-1 border-t border-slate-100 transition cursor-pointer font-bold"
+                      className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-[#2B070E] rounded-lg flex items-center space-x-2 mt-1 border-t border-slate-100 dark:border-[#380C14] transition cursor-pointer font-bold"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Déconnexion</span>

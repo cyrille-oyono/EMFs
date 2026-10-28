@@ -17,11 +17,13 @@ import {
   Film,
   GraduationCap,
   Share2,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 import { ChurchLogo } from '../common/ChurchLogo';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { ThemeToggle } from '../common/ThemeToggle';
 
 interface MobileNavProps {
   isOpen: boolean;
@@ -60,6 +62,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
     { id: 'attendance', label: 'Présences', icon: CheckSquare, roles: ['ADMIN', 'PASTEUR', 'SECRÉTAIRE', 'RESPONSABLE_MINISTÈRE'] },
     { id: 'events', label: 'Événements', icon: Calendar },
     { id: 'testimonials', label: 'Témoignages', icon: HeartHandshake },
+    { id: 'forum', label: 'Forum Chrétien', icon: MessageSquare },
     { id: 'verses', label: 'Versets du jour', icon: BookOpen },
     { id: 'resources', label: 'Ressources & Prières', icon: FileText },
     { id: 'cms-homepage', label: 'CMS Accueil', icon: Globe, pastorOrAdminOnly: true },
@@ -100,8 +103,11 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
         {/* Mobile Quick Notifications Bar */}
         <div className="px-4 py-2.5 bg-[#6E1325]/70 border-b border-[#6E1325] flex items-center justify-between">
-          <span className="text-xs font-bold text-amber-200">Alertes & Notifications</span>
-          <NotificationBell onNavigate={handleNav} className="text-white hover:bg-[#6E1325]" />
+          <span className="text-xs font-bold text-amber-200">Alertes & Thème</span>
+          <div className="flex items-center space-x-1.5">
+            <ThemeToggle variant="icon" />
+            <NotificationBell onNavigate={handleNav} className="text-white hover:bg-[#6E1325]" />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -132,6 +138,14 @@ export const MobileNav: React.FC<MobileNavProps> = ({
               </button>
             );
           })}
+        </div>
+
+        {/* Theme mode switcher inside drawer */}
+        <div className="p-3 border-t border-[#6E1325] bg-[#3B0810]">
+          <div className="text-[10px] uppercase font-bold text-rose-200/60 mb-1.5">
+            Mode d'affichage
+          </div>
+          <ThemeToggle variant="segmented" className="w-full justify-between" />
         </div>
 
         <div className="p-3 border-t border-[#6E1325] text-[11px] text-rose-200/70">

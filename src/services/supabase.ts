@@ -275,6 +275,57 @@ export const MEDIA_ROW_ID = 'latest_service_media';
 export const CMS_ROW_ID = 'homepage_cms';
 
 /**
+ * Canal Broadcast Supabase partagé pour la réactivité instantanée à zéro latence
+ */
+let sharedRealtimeBroadcastChannel: any = null;
+
+export function getSharedRealtimeBroadcastChannel() {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  if (!sharedRealtimeBroadcastChannel) {
+    try {
+      sharedRealtimeBroadcastChannel = client.channel('emf_church_realtime_broadcast', {
+        config: { broadcast: { ack: false } },
+      });
+      sharedRealtimeBroadcastChannel.subscribe();
+    } catch (e) {
+      console.warn('Realtime broadcast channel init error:', e);
+    }
+  }
+  return sharedRealtimeBroadcastChannel;
+}
+
+export function broadcastRealtimeAppContent(sectionKey: string, contentData: any, eventType: string = 'UPDATE') {
+  try {
+    const ch = getSharedRealtimeBroadcastChannel();
+    if (ch) {
+      ch.send({
+        type: 'broadcast',
+        event: 'app_content_changed',
+        payload: { sectionKey, contentData, eventType },
+      });
+    }
+  } catch (e) {
+    console.warn('Broadcast app_content_changed error:', e);
+  }
+}
+
+export function broadcastRealtimeDynamicPost(eventType: string, post?: DynamicPost, oldPostId?: string) {
+  try {
+    const ch = getSharedRealtimeBroadcastChannel();
+    if (ch) {
+      ch.send({
+        type: 'broadcast',
+        event: 'dynamic_post_changed',
+        payload: { eventType, newPost: post, oldPostId },
+      });
+    }
+  } catch (e) {
+    console.warn('Broadcast dynamic_post_changed error:', e);
+  }
+}
+
+/**
  * ========================================================
  * 1. TABLE app_content : ÉTAT & MODIFICATIONS DE PAGES (JSON)
  * ========================================================
@@ -307,6 +358,9 @@ export async function saveAppContent(
       console.error(`Supabase app_content error (${sectionKey}):`, error);
       return { success: false, error: error.message };
     }
+
+    // Diffusion temps réel immédiate aux visiteurs connectés
+    broadcastRealtimeAppContent(sectionKey.trim(), contentData, 'UPDATE');
 
     return { success: true };
   } catch (err: any) {
@@ -441,6 +495,15 @@ export function subscribeToAppContent(
           }
         }
       )
+      .on('broadcast', { event: 'app_content_changed' }, ({ payload }) => {
+        if (payload && payload.sectionKey) {
+          onUpdate({
+            sectionKey: payload.sectionKey,
+            contentData: payload.contentData,
+            eventType: payload.eventType || 'UPDATE',
+          });
+        }
+      })
       .subscribe();
 
     return () => {
@@ -544,7 +607,10 @@ export async function createDynamicPost(post: {
       return { success: false, error: error.message };
     }
 
-    return { success: true, data: data as DynamicPost };
+    const created = data as DynamicPost;
+    broadcastRealtimeDynamicPost('INSERT', created);
+
+    return { success: true, data: created };
   } catch (err: any) {
     console.error('Supabase: Exception insertion dynamic_posts:', err);
     return { success: false, error: err?.message || 'Erreur inconnue' };
@@ -572,7 +638,9 @@ export async function updateDynamicPost(
     if (error) {
       return { success: false, error: error.message };
     }
-    return { success: true, data: data as DynamicPost };
+    const updated = data as DynamicPost;
+    broadcastRealtimeDynamicPost('UPDATE', updated);
+    return { success: true, data: updated };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Erreur inconnue' };
   }
@@ -594,6 +662,7 @@ export async function deleteDynamicPost(id: string): Promise<{ success: boolean;
     if (error) {
       return { success: false, error: error.message };
     }
+    broadcastRealtimeDynamicPost('DELETE', undefined, id);
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Erreur inconnue' };
@@ -628,6 +697,15 @@ export function subscribeToDynamicPosts(
           });
         }
       )
+      .on('broadcast', { event: 'dynamic_post_changed' }, ({ payload }) => {
+        if (payload) {
+          onUpdate({
+            eventType: payload.eventType || 'INSERT',
+            newPost: payload.newPost,
+            oldPostId: payload.oldPostId,
+          });
+        }
+      })
       .subscribe();
 
     return () => {

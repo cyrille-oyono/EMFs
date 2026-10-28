@@ -32,6 +32,7 @@ import {
   Smartphone,
   Image as ImageIcon,
   Lock,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -61,6 +62,7 @@ import { LatestServiceMediaSection } from '../components/media/LatestServiceMedi
 import { ChurchSocialsSection } from '../components/home/ChurchSocialsSection';
 import { JoinCommunityModal } from '../components/home/JoinCommunityModal';
 import { NotificationBell } from '../components/notifications/NotificationBell';
+import { ThemeToggle } from '../components/common/ThemeToggle';
 import { InteractiveHomeCalendar } from '../components/home/InteractiveHomeCalendar';
 import { FooterChurchEditorModal } from '../components/home/FooterChurchEditorModal';
 import { ManagePresentationImageModal } from '../components/home/ManagePresentationImageModal';
@@ -297,6 +299,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
           media_url: '',
           author: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Bureau Pastoral',
         });
+        showToast('✓ Publication enregistrée et diffusée en direct sur le web !');
         loadData();
       }
     } catch (err) {
@@ -309,7 +312,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   useEffect(() => {
     loadData();
 
-    // 1. Souscription temps réel à la table app_content (sections, CMS, cultes, carrousel, paramètres)
+    // 1. Souscription temps réel à la table app_content (sections, CMS, cultes, carrousel, paramètres, événements)
     let unsubscribeAppContent = () => {};
     try {
       unsubscribeAppContent = subscribeToAppContent(({ sectionKey, contentData }) => {
@@ -317,16 +320,25 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
           setSections(contentData.cmsState.publishedSections.filter((s: any) => s.isVisible));
           if (contentData.carouselSlides) setCarouselSlides(contentData.carouselSlides);
           if (contentData.weeklyPrograms) setWeeklyPrograms(contentData.weeklyPrograms);
+          showToast('✓ Page d’accueil actualisée en direct');
         } else if (sectionKey === 'church_settings') {
           refreshSettings();
+          showToast('✓ Paramètres de la paroisse mis à jour');
         } else if (sectionKey === 'carousel_slides' && Array.isArray(contentData)) {
           setCarouselSlides(contentData);
+          showToast('✓ Carrousel d’accueil actualisé en direct');
         } else if (sectionKey === 'weekly_programs' && Array.isArray(contentData)) {
           setWeeklyPrograms(contentData);
+          showToast('✓ Programmes des cultes actualisés en direct');
         } else if (sectionKey === 'latest_service_media') {
           setLatestServiceMedia(contentData);
+          showToast('✓ Médias du culte actualisés en direct');
         } else if (sectionKey === 'homepage_sections' && Array.isArray(contentData)) {
           setSections(contentData.filter((s: any) => s.isVisible));
+        } else if (sectionKey === 'events' && Array.isArray(contentData)) {
+          setEvents(contentData);
+        } else if (sectionKey === 'testimonials' && Array.isArray(contentData)) {
+          setTestimonials(contentData);
         }
         setLastSyncedTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       });
@@ -337,11 +349,26 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
     // 2. Souscription temps réel à la table dynamic_posts (publications, enseignements, annonces)
     let unsubscribeDynamicPosts = () => {};
     try {
-      unsubscribeDynamicPosts = subscribeToDynamicPosts(() => {
-        apiClient.getDynamicPosts().then((posts) => {
-          if (posts) setDynamicPosts(posts);
-          setLastSyncedTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-        }).catch(() => {});
+      unsubscribeDynamicPosts = subscribeToDynamicPosts((payload) => {
+        if (payload.eventType === 'INSERT' && payload.newPost) {
+          setDynamicPosts((prev) => {
+            const exists = prev.some((p) => p.id === payload.newPost?.id);
+            if (exists) return prev;
+            return [payload.newPost!, ...prev];
+          });
+          showToast(`✨ Nouvelle publication : "${payload.newPost.title}"`);
+        } else if (payload.eventType === 'UPDATE' && payload.newPost) {
+          setDynamicPosts((prev) =>
+            prev.map((p) => (p.id === payload.newPost?.id ? payload.newPost! : p))
+          );
+        } else if (payload.eventType === 'DELETE' && payload.oldPostId) {
+          setDynamicPosts((prev) => prev.filter((p) => p.id !== payload.oldPostId));
+        } else {
+          apiClient.getDynamicPosts().then((posts) => {
+            if (posts) setDynamicPosts(posts);
+          }).catch(() => {});
+        }
+        setLastSyncedTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       });
     } catch (e) {
       console.warn('Realtime dynamic_posts non disponible:', e);
@@ -564,7 +591,14 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
               onClick={onGoToPrayers || onGoToDashboard}
               className="hover:text-[#6E1325] text-[#C99B2E] transition uppercase font-bold tracking-wider cursor-pointer"
             >
-              Prières
+              <span>Prières</span>
+            </button>
+            <button
+              onClick={() => onNavigateToPage?.('forum')}
+              className="hover:text-[#6E1325] text-[#4A0E17] transition uppercase font-bold tracking-wider cursor-pointer flex items-center space-x-1"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-[#C99B2E]" />
+              <span>Forum Chrétien</span>
             </button>
             <a href="#publications" className="hover:text-[#6E1325] text-[#4A0E17] transition uppercase font-bold tracking-wider cursor-pointer">
               Publications
@@ -573,6 +607,10 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
           </nav>
 
           <div className="flex items-center space-x-2">
+            <ThemeToggle
+              variant="icon"
+              className="text-[#4A0E17] dark:text-amber-200 hover:bg-slate-100 dark:hover:bg-[#2B070E] border border-slate-200 dark:border-[#4A0E17]"
+            />
             <NotificationBell
               onNavigate={(page) => (onNavigateToPage ? onNavigateToPage(page) : onGoToDashboard())}
               className="text-[#4A0E17] hover:bg-slate-100 border border-slate-200"

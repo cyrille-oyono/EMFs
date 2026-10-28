@@ -136,120 +136,13 @@ export interface DatabaseState {
 }
 
 function loadInitialDatabase(): DatabaseState {
+  // Suppression de tout stockage purement local (localStorage) selon la directive utilisateur.
+  // La source de vérité unique est Supabase (app_content et dynamic_posts).
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const settings = parsed.settings || INITIAL_SETTINGS;
-        if (!settings.treasury) {
-          settings.treasury = INITIAL_SETTINGS.treasury;
-        }
-        return {
-          settings,
-          users: (() => {
-            const list = parsed.users || INITIAL_USERS;
-            const admin = list.find((u: any) => u.id === 'usr-admin-1' || u.role === 'ADMIN');
-            if (admin) {
-              admin.email = 'cyrilleoyono6@gmail.com';
-              admin.firstName = 'Cyrille';
-              admin.lastName = 'Oyono';
-              admin.passwordHash = 'AdminEMF2026!';
-            }
-            return list;
-          })(),
-          members: parsed.members || INITIAL_MEMBERS,
-          families: parsed.families || INITIAL_FAMILIES,
-          ministries: parsed.ministries || INITIAL_MINISTRIES,
-          departments: parsed.departments && parsed.departments.length > 0 ? parsed.departments : INITIAL_DEPARTMENTS,
-          attendanceSessions: parsed.attendanceSessions || INITIAL_SESSIONS,
-          attendanceRecords: parsed.attendanceRecords || INITIAL_ATTENDANCE_RECORDS,
-          transactions: parsed.transactions || INITIAL_TRANSACTIONS,
-          transactionCategories: parsed.transactionCategories || INITIAL_CATEGORIES,
-          events: (() => {
-            if (!parsed.events || parsed.events.length === 0) return INITIAL_EVENTS;
-            const existingIds = new Set(parsed.events.map((e: any) => e.id));
-            const missing = INITIAL_EVENTS.filter((e) => !existingIds.has(e.id));
-            return [...parsed.events, ...missing];
-          })(),
-          eventParticipants: parsed.eventParticipants || [],
-          announcements: parsed.announcements || INITIAL_ANNOUNCEMENTS,
-          testimonials: parsed.testimonials || INITIAL_TESTIMONIALS,
-          forumCategories: parsed.forumCategories || INITIAL_FORUM_CATEGORIES,
-          forumTopics: parsed.forumTopics || INITIAL_FORUM_TOPICS,
-          forumPosts: parsed.forumPosts || INITIAL_FORUM_POSTS,
-          forumReports: parsed.forumReports || [],
-          bibleVerses: parsed.bibleVerses || INITIAL_BIBLE_VERSES,
-          media: parsed.media || INITIAL_MEDIA,
-          parakletosYears: parsed.parakletosYears || INITIAL_PARAKLETOS_YEARS,
-          parakletosClasses: parsed.parakletosClasses || INITIAL_PARAKLETOS_CLASSES,
-          parakletosSubjects: parsed.parakletosSubjects || INITIAL_PARAKLETOS_SUBJECTS,
-          parakletosStudents: parsed.parakletosStudents || INITIAL_PARAKLETOS_STUDENTS,
-          parakletosGrades: parsed.parakletosGrades || INITIAL_PARAKLETOS_GRADES,
-          parakletosInfo: parsed.parakletosInfo || INITIAL_PARAKLETOS_INFO,
-          parakletosTeachers: parsed.parakletosTeachers || INITIAL_PARAKLETOS_TEACHERS,
-          parakletosAdmissions: parsed.parakletosAdmissions || INITIAL_PARAKLETOS_ADMISSIONS,
-          cmsState: (() => {
-            const cms = parsed.cmsState || INITIAL_CMS_STATE;
-            if (cms?.publishedSections) {
-              const pres = cms.publishedSections.find((s: any) => s.key === 'presentation');
-              if (pres && pres.imageUrl && pres.imageUrl.includes('511795409834')) {
-                pres.imageUrl = '';
-              }
-            }
-            if (cms?.draftSections) {
-              const presDraft = cms.draftSections.find((s: any) => s.key === 'presentation');
-              if (presDraft && presDraft.imageUrl && presDraft.imageUrl.includes('511795409834')) {
-                presDraft.imageUrl = '';
-              }
-            }
-            return cms;
-          })(),
-          auditLogs: parsed.auditLogs || INITIAL_AUDIT_LOGS,
-          backups: parsed.backups || INITIAL_BACKUPS,
-          prayerRequests: parsed.prayerRequests || INITIAL_PRAYER_REQUESTS,
-          associatedChurches: parsed.associatedChurches || INITIAL_ASSOCIATED_CHURCHES,
-          homeCells: parsed.homeCells || INITIAL_HOME_CELLS,
-          ministryAdhesions: parsed.ministryAdhesions || INITIAL_MINISTRY_ADHESIONS,
-          carouselSlides: (() => {
-            if (!parsed.carouselSlides || parsed.carouselSlides.length === 0) return INITIAL_CAROUSEL_SLIDES;
-            // Upgrade slides 4 & 5 if they still point to generic old links
-            return parsed.carouselSlides.map((s: any) => {
-              if (s.id === 'slide-4' && s.primaryButtonLink === '#about') {
-                return {
-                  ...s,
-                  title: 'Cellules de Prière dans vos Quartiers',
-                  primaryButtonText: 'Cellules de Prière',
-                  primaryButtonLink: '/home-cells',
-                  secondaryButtonText: 'Guides & Ressources',
-                  secondaryButtonLink: '/resources?cat=PRIERE',
-                };
-              }
-              if (s.id === 'slide-5' && s.primaryButtonLink === '#services') {
-                return {
-                  ...s,
-                  badge: 'Formation Biblique & Leadership',
-                  title: 'Institut Biblique Parakletos d’Akon',
-                  primaryButtonText: 'S’inscrire à l’Institut',
-                  primaryButtonLink: '/parakletos#adhesion',
-                  secondaryButtonText: 'Ressources & Études',
-                  secondaryButtonLink: '/resources',
-                };
-              }
-              return s;
-            });
-          })(),
-          latestServiceMedia: parsed.latestServiceMedia || INITIAL_LATEST_SERVICE_MEDIA,
-          notifications: parsed.notifications && parsed.notifications.length > 0 ? parsed.notifications : INITIAL_NOTIFICATIONS,
-          resources: parsed.resources && parsed.resources.length > 0 ? parsed.resources : INITIAL_RESOURCES,
-          weeklyPrograms: parsed.weeklyPrograms && parsed.weeklyPrograms.length > 0 ? parsed.weeklyPrograms : INITIAL_WEEKLY_PROGRAMS,
-        };
-      }
-    } catch (e) {
-      console.error('Error loading database from storage:', e);
-    }
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {}
   }
-
   return {
     settings: INITIAL_SETTINGS,
     users: INITIAL_USERS,
@@ -280,12 +173,12 @@ function loadInitialDatabase(): DatabaseState {
     parakletosTeachers: INITIAL_PARAKLETOS_TEACHERS,
     parakletosAdmissions: INITIAL_PARAKLETOS_ADMISSIONS,
     cmsState: INITIAL_CMS_STATE,
-    auditLogs: INITIAL_AUDIT_LOGS,
-    backups: INITIAL_BACKUPS,
+    auditLogs: [],
+    backups: [],
     prayerRequests: INITIAL_PRAYER_REQUESTS,
     associatedChurches: INITIAL_ASSOCIATED_CHURCHES,
     homeCells: INITIAL_HOME_CELLS,
-    ministryAdhesions: INITIAL_MINISTRY_ADHESIONS,
+    ministryAdhesions: [],
     carouselSlides: INITIAL_CAROUSEL_SLIDES,
     latestServiceMedia: INITIAL_LATEST_SERVICE_MEDIA,
     notifications: INITIAL_NOTIFICATIONS,
@@ -297,13 +190,8 @@ function loadInitialDatabase(): DatabaseState {
 let db: DatabaseState = loadInitialDatabase();
 
 function persistDatabase() {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    } catch (e) {
-      console.error('Failed to persist database state:', e);
-    }
-  }
+  // Pas de stockage purement local (localStorage) selon la directive utilisateur.
+  // Toutes les données sont persistées en direct dans Supabase (app_content, dynamic_posts).
 }
 
 export const Storage = {
@@ -1301,11 +1189,48 @@ export const Storage = {
     return db.forumPosts.filter((p) => p.topicId === topicId);
   },
 
+  setForumTopics(topics: ForumTopic[]): void {
+    if (Array.isArray(topics)) {
+      db.forumTopics = topics;
+    }
+  },
+
+  setForumPosts(posts: ForumPost[]): void {
+    if (Array.isArray(posts)) {
+      db.forumPosts = posts;
+    }
+  },
+
+  setTopicPosts(topicId: string, posts: ForumPost[]): void {
+    if (Array.isArray(posts)) {
+      db.forumPosts = [...db.forumPosts.filter((p) => p.topicId !== topicId), ...posts];
+    }
+  },
+
+  setPrayerRequests(requests: PrayerRequest[]): void {
+    if (Array.isArray(requests)) {
+      db.prayerRequests = requests;
+    }
+  },
+
+  setEvents(events: Event[]): void {
+    if (Array.isArray(events)) {
+      db.events = events;
+    }
+  },
+
+  setTestimonials(testimonials: Testimonial[]): void {
+    if (Array.isArray(testimonials)) {
+      db.testimonials = testimonials;
+    }
+  },
+
   createForumTopic(
     categoryId: string,
     title: string,
     content: string,
-    currentUser: User
+    currentUser: User,
+    isPinned: boolean = false
   ): { topic: ForumTopic; post: ForumPost } {
     const topicId = 'top-' + Date.now();
     const topic: ForumTopic = {
@@ -1315,7 +1240,7 @@ export const Storage = {
       authorUserId: currentUser.id,
       authorName: `${currentUser.firstName} ${currentUser.lastName}`,
       authorRole: currentUser.role,
-      isPinned: false,
+      isPinned: !!isPinned,
       isLocked: false,
       isHidden: false,
       viewCount: 1,
@@ -1341,11 +1266,82 @@ export const Storage = {
       'CREATION_SUJET_FORUM',
       'Forum',
       'ForumTopic',
-      `Nouveau sujet créé : "${title}"`,
+      `Nouveau sujet créé : "${title}" (Épinglé: ${isPinned ? 'Oui' : 'Non'})`,
       { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, role: currentUser.role },
       topicId
     );
     return { topic, post };
+  },
+
+  toggleTopicPin(topicId: string, currentUser?: User): boolean {
+    const t = db.forumTopics.find((top) => top.id === topicId);
+    if (!t) return false;
+    t.isPinned = !t.isPinned;
+    persistDatabase();
+    if (currentUser) {
+      Storage.logAudit(
+        'EPINGLAGE_SUJET_FORUM',
+        'Forum',
+        'ForumTopic',
+        `Sujet "${t.title}" ${t.isPinned ? 'épinglé' : 'désépinglé'}`,
+        { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, role: currentUser.role },
+        topicId
+      );
+    }
+    return t.isPinned;
+  },
+
+  toggleTopicLock(topicId: string, currentUser?: User): boolean {
+    const t = db.forumTopics.find((top) => top.id === topicId);
+    if (!t) return false;
+    t.isLocked = !t.isLocked;
+    persistDatabase();
+    if (currentUser) {
+      Storage.logAudit(
+        'VERROUILLAGE_SUJET_FORUM',
+        'Forum',
+        'ForumTopic',
+        `Sujet "${t.title}" ${t.isLocked ? 'verrouillé (clôturé)' : 'déverrouillé'}`,
+        { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, role: currentUser.role },
+        topicId
+      );
+    }
+    return t.isLocked;
+  },
+
+  deleteForumTopic(topicId: string, currentUser?: User): boolean {
+    const t = db.forumTopics.find((top) => top.id === topicId);
+    db.forumTopics = db.forumTopics.filter((top) => top.id !== topicId);
+    db.forumPosts = db.forumPosts.filter((p) => p.topicId !== topicId);
+    persistDatabase();
+    if (currentUser && t) {
+      Storage.logAudit(
+        'SUPPRESSION_SUJET_FORUM',
+        'Forum',
+        'ForumTopic',
+        `Suppression du sujet : "${t.title}"`,
+        { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, role: currentUser.role },
+        topicId
+      );
+    }
+    return true;
+  },
+
+  deleteForumPost(postId: string, currentUser?: User): boolean {
+    const p = db.forumPosts.find((post) => post.id === postId);
+    db.forumPosts = db.forumPosts.filter((post) => post.id !== postId);
+    persistDatabase();
+    if (currentUser && p) {
+      Storage.logAudit(
+        'SUPPRESSION_REPONSE_FORUM',
+        'Forum',
+        'ForumPost',
+        `Suppression d'une réponse de ${p.authorName}`,
+        { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, role: currentUser.role },
+        postId
+      );
+    }
+    return true;
   },
 
   createForumPost(topicId: string, content: string, currentUser: User): ForumPost {
@@ -1386,6 +1382,24 @@ export const Storage = {
     db.forumReports.unshift(report);
     persistDatabase();
     return report;
+  },
+
+  resolveForumReport(reportId: string, action: 'TRAITÉ' | 'REJETÉ', currentUser?: User): boolean {
+    const r = db.forumReports.find((rep) => rep.id === reportId);
+    if (!r) return false;
+    r.status = action;
+    persistDatabase();
+    if (currentUser) {
+      Storage.logAudit(
+        'TRAITEMENT_SIGNALEMENT_FORUM',
+        'Forum',
+        'ForumReport',
+        `Signalement ${reportId} marqué ${action}`,
+        { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, role: currentUser.role },
+        reportId
+      );
+    }
+    return true;
   },
 
   getForumReports(): ForumReport[] {

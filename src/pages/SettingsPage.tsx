@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { SystemSettings } from '../types';
 import { AdminLeadershipAndTreasurySettings } from '../components/admin/AdminLeadershipAndTreasurySettings';
+import { ThemeToggle } from '../components/common/ThemeToggle';
 
 export const SettingsPage: React.FC = () => {
   const { settings, updateSettings, refreshSettings, hasRole, isSupabaseConfigured } = useAuth();
@@ -450,6 +451,17 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.church_settings;`;
           <div className="flex items-center space-x-2 pb-3 border-b border-slate-100">
             <Palette className="w-4 h-4 text-[#6E1325]" />
             <h3 className="font-bold text-sm text-[#4A0E17]">Thème Visuel & Charte Graphique</h3>
+          </div>
+
+          {/* Mode Sombre / Mode Clair */}
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#1A060A] border border-slate-200 dark:border-[#4A0E17]/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="font-bold text-sm text-slate-800 dark:text-rose-100">Mode d'affichage de l'application</p>
+              <p className="text-xs text-slate-500 dark:text-rose-200/70 mt-0.5">
+                Basculez entre le mode clair, le mode sombre velours (bordeaux profond & or) ou le mode automatique selon votre système.
+              </p>
+            </div>
+            <ThemeToggle variant="segmented" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

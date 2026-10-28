@@ -39,6 +39,7 @@ import {
   PrayerAlertEvent,
   RealtimeStatus,
 } from '../services/prayerRealtimeService';
+import { subscribeToAppContent } from '../services/supabase';
 
 interface PrayerRequestsPageProps {
   onNavigate?: (page: string) => void;
@@ -144,10 +145,25 @@ export const PrayerRequestsPage: React.FC<PrayerRequestsPageProps> = () => {
       );
     });
 
+    // 4. Supabase app_content real-time sync for prayer requests
+    let unsubApp = () => {};
+    try {
+      unsubApp = subscribeToAppContent(({ sectionKey, contentData }) => {
+        if (sectionKey === 'prayer_requests' && Array.isArray(contentData)) {
+          setPrayers(
+            isPastorOrAdmin
+              ? contentData
+              : contentData.filter((p: any) => !p.isConfidentialPastoralOnly)
+          );
+        }
+      });
+    } catch {}
+
     return () => {
       unsubStatus();
       unsubNewPrayer();
       unsubIntercession();
+      unsubApp();
     };
   }, [isPastorOrAdmin]);
 

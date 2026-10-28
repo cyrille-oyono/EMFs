@@ -138,12 +138,7 @@ class ChurchSyncService {
       }
     }
 
-    // Also write to localStorage for fallback storage event
-    try {
-      localStorage.setItem('emf_church_last_sync', JSON.stringify({ type, timestamp: event.timestamp }));
-    } catch {
-      // ignore
-    }
+    // Pas de stockage purement local (localStorage) conformément aux consignes.
   }
 
   public broadcastSettingsUpdated(settings: SystemSettings) {

@@ -217,23 +217,55 @@ export const apiClient = {
 
   // Events
   async getEvents(): Promise<Event[]> {
+    if (isSupabaseConfigured()) {
+      try {
+        const remote = await getAppContent<Event[]>('events');
+        if (Array.isArray(remote) && remote.length > 0) {
+          Storage.setEvents(remote);
+          return remote;
+        }
+      } catch (err) {
+        console.warn('Erreur lecture events depuis Supabase:', err);
+      }
+    }
     return Storage.getEvents();
   },
 
   async createEvent(data: any, user?: User): Promise<Event> {
     const res = Storage.createEvent(data, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('events', Storage.getEvents());
+      } catch (err) {
+        console.warn('Erreur save events dans Supabase:', err);
+      }
+    }
     churchSyncService.broadcastAgendaUpdated({ message: `Événement créé : ${res.title}` });
     return res;
   },
 
   async updateEvent(id: string, data: Partial<Event>, user?: User): Promise<Event | null> {
     const res = Storage.updateEvent(id, data, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('events', Storage.getEvents());
+      } catch (err) {
+        console.warn('Erreur update events dans Supabase:', err);
+      }
+    }
     churchSyncService.broadcastAgendaUpdated({ message: 'Événement mis à jour' });
     return res;
   },
 
   async deleteEvent(id: string, user?: User): Promise<boolean> {
     const res = Storage.deleteEvent(id, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('events', Storage.getEvents());
+      } catch (err) {
+        console.warn('Erreur delete events dans Supabase:', err);
+      }
+    }
     churchSyncService.broadcastAgendaUpdated({ message: 'Événement supprimé' });
     return res;
   },
@@ -391,23 +423,128 @@ export const apiClient = {
   },
 
   async getForumTopics(categoryId?: string): Promise<ForumTopic[]> {
+    if (isSupabaseConfigured()) {
+      try {
+        const remote = await getAppContent<ForumTopic[]>('forum_topics');
+        if (Array.isArray(remote) && remote.length > 0) {
+          Storage.setForumTopics(remote);
+          return categoryId && categoryId !== 'all' ? remote.filter((t) => t.categoryId === categoryId) : remote;
+        }
+      } catch (err) {
+        console.warn('Erreur chargement forum_topics Supabase:', err);
+      }
+    }
     return Storage.getForumTopics(categoryId);
   },
 
   async getForumPosts(topicId: string): Promise<ForumPost[]> {
+    if (isSupabaseConfigured()) {
+      try {
+        const remote = await getAppContent<ForumPost[]>('forum_posts');
+        if (Array.isArray(remote) && remote.length > 0) {
+          Storage.setForumPosts(remote);
+          return remote.filter((p) => p.topicId === topicId);
+        }
+      } catch (err) {
+        console.warn('Erreur chargement forum_posts Supabase:', err);
+      }
+    }
     return Storage.getForumPosts(topicId);
   },
 
-  async createForumTopic(categoryId: string, title: string, content: string, user: User) {
-    return Storage.createForumTopic(categoryId, title, content, user);
+  async createForumTopic(categoryId: string, title: string, content: string, user: User, isPinned: boolean = false) {
+    const res = Storage.createForumTopic(categoryId, title, content, user, isPinned);
+    if (isSupabaseConfigured()) {
+      try {
+        await Promise.all([
+          saveAppContent('forum_topics', Storage.getForumTopics()),
+          saveAppContent('forum_posts', Storage.getForumPosts(res.topic.id)),
+        ]);
+      } catch (err) {
+        console.warn('Erreur synchro forum topic Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'forum:new_topic', topic: res.topic });
+    return res;
+  },
+
+  async toggleTopicPin(topicId: string, user?: User) {
+    const res = Storage.toggleTopicPin(topicId, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('forum_topics', Storage.getForumTopics());
+      } catch (err) {
+        console.warn('Erreur synchro pin forum Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'forum:topic_pinned', topicId });
+    return res;
+  },
+
+  async toggleTopicLock(topicId: string, user?: User) {
+    const res = Storage.toggleTopicLock(topicId, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('forum_topics', Storage.getForumTopics());
+      } catch (err) {
+        console.warn('Erreur synchro lock forum Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'forum:topic_locked', topicId });
+    return res;
+  },
+
+  async deleteForumTopic(topicId: string, user?: User) {
+    const res = Storage.deleteForumTopic(topicId, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await Promise.all([
+          saveAppContent('forum_topics', Storage.getForumTopics()),
+          saveAppContent('forum_posts', Storage.getForumPosts(topicId)),
+        ]);
+      } catch (err) {
+        console.warn('Erreur synchro delete forum Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'forum:topic_deleted', topicId });
+    return res;
+  },
+
+  async deleteForumPost(postId: string, user?: User) {
+    const res = Storage.deleteForumPost(postId, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('forum_posts', Storage.getForumPosts(''));
+      } catch (err) {
+        console.warn('Erreur synchro delete post Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'forum:post_deleted', postId });
+    return res;
   },
 
   async createForumPost(topicId: string, content: string, user: User) {
-    return Storage.createForumPost(topicId, content, user);
+    const res = Storage.createForumPost(topicId, content, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await Promise.all([
+          saveAppContent('forum_posts', Storage.getForumPosts(topicId)),
+          saveAppContent('forum_topics', Storage.getForumTopics()),
+        ]);
+      } catch (err) {
+        console.warn('Erreur synchro post forum Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'forum:new_post', post: res, topicId });
+    return res;
   },
 
   async reportForumPost(postId: string, reason: string, user: User) {
     return Storage.reportForumPost(postId, reason, user);
+  },
+
+  async resolveForumReport(reportId: string, action: 'TRAITÉ' | 'REJETÉ', user?: User) {
+    return Storage.resolveForumReport(reportId, action, user);
   },
 
   async getForumReports() {
@@ -647,6 +784,7 @@ export const apiClient = {
     if (isSupabaseConfigured()) {
       try {
         await Promise.all([
+          saveAppContent('presentation_image', imageUrl),
           saveChurchSettingsToSupabase(Storage.getSettings()),
           apiClient.syncFullCMSToSupabase(user),
         ]);
@@ -704,6 +842,16 @@ export const apiClient = {
 
   // Prayer Requests
   async getPrayerRequests(includeConfidential = false, userRole?: Role): Promise<PrayerRequest[]> {
+    if (isSupabaseConfigured()) {
+      try {
+        const remote = await getAppContent<PrayerRequest[]>('prayer_requests');
+        if (Array.isArray(remote) && remote.length > 0) {
+          Storage.setPrayerRequests(remote);
+        }
+      } catch (err) {
+        console.warn('Erreur chargement prayer_requests Supabase:', err);
+      }
+    }
     return Storage.getPrayerRequests(includeConfidential, userRole);
   },
 
@@ -720,7 +868,16 @@ export const apiClient = {
     },
     user?: User
   ): Promise<PrayerRequest> {
-    return Storage.createPrayerRequest(data, user);
+    const res = Storage.createPrayerRequest(data, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('prayer_requests', Storage.getPrayerRequests(true));
+      } catch (err) {
+        console.warn('Erreur synchro create prayer_request Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'prayer:created', request: res });
+    return res;
   },
 
   async updatePrayerRequestStatus(
@@ -728,19 +885,55 @@ export const apiClient = {
     status: PrayerRequest['status'],
     user?: User
   ): Promise<PrayerRequest | null> {
-    return Storage.updatePrayerRequestStatus(id, status, user);
+    const res = Storage.updatePrayerRequestStatus(id, status, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('prayer_requests', Storage.getPrayerRequests(true));
+      } catch (err) {
+        console.warn('Erreur synchro update prayer_request Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'prayer:updated', requestId: id });
+    return res;
   },
 
   async incrementPrayerCount(id: string): Promise<PrayerRequest | null> {
-    return Storage.incrementPrayerCount(id);
+    const res = Storage.incrementPrayerCount(id);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('prayer_requests', Storage.getPrayerRequests(true));
+      } catch (err) {
+        console.warn('Erreur synchro increment prayer_request Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'prayer:incremented', requestId: id });
+    return res;
   },
 
   async addPrayerTestimony(id: string, testimony: string, user?: User): Promise<PrayerRequest | null> {
-    return Storage.addPrayerTestimony(id, testimony, user);
+    const res = Storage.addPrayerTestimony(id, testimony, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('prayer_requests', Storage.getPrayerRequests(true));
+      } catch (err) {
+        console.warn('Erreur synchro testimony prayer_request Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'prayer:testimony_added', requestId: id });
+    return res;
   },
 
   async deletePrayerRequest(id: string, user?: User): Promise<boolean> {
-    return Storage.deletePrayerRequest(id, user);
+    const res = Storage.deletePrayerRequest(id, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('prayer_requests', Storage.getPrayerRequests(true));
+      } catch (err) {
+        console.warn('Erreur synchro delete prayer_request Supabase:', err);
+      }
+    }
+    churchSyncService.broadcast('church:cms_updated', { type: 'prayer:deleted', requestId: id });
+    return res;
   },
 
   // Associated Churches
@@ -1153,6 +1346,65 @@ export const apiClient = {
     }
     churchSyncService.broadcastAgendaUpdated({ message: 'Programmes réorganisés' });
     return res;
+  },
+
+  // Initialisation et hydratation globale depuis Supabase
+  async bootstrapInitialDataFromSupabase(): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    try {
+      const allContent = await getAllAppContent();
+      if (allContent['church_settings']) {
+        Storage.updateSettings(allContent['church_settings']);
+      }
+      if (allContent['homepage_cms']?.cmsState) {
+        Storage.setCMSState(allContent['homepage_cms'].cmsState);
+      }
+      if (Array.isArray(allContent['carousel_slides']) && allContent['carousel_slides'].length > 0) {
+        Storage.setCarouselSlides(allContent['carousel_slides']);
+      }
+      if (Array.isArray(allContent['weekly_programs']) && allContent['weekly_programs'].length > 0) {
+        Storage.setWeeklyPrograms(allContent['weekly_programs']);
+      }
+      if (allContent['latest_service_media']) {
+        Storage.updateLatestServiceMedia(allContent['latest_service_media']);
+      }
+      if (Array.isArray(allContent['events']) && allContent['events'].length > 0) {
+        Storage.setEvents(allContent['events']);
+      }
+      if (Array.isArray(allContent['forum_topics']) && allContent['forum_topics'].length > 0) {
+        Storage.setForumTopics(allContent['forum_topics']);
+      }
+      if (Array.isArray(allContent['forum_posts']) && allContent['forum_posts'].length > 0) {
+        Storage.setForumPosts(allContent['forum_posts']);
+      }
+      if (Array.isArray(allContent['prayer_requests']) && allContent['prayer_requests'].length > 0) {
+        Storage.setPrayerRequests(allContent['prayer_requests']);
+      }
+
+      // Récupération des publications dynamiques
+      const posts = await getDynamicPosts({ publishedOnly: false });
+      if (Array.isArray(posts) && posts.length > 0) {
+        Storage.setAnnouncements(
+          posts.map((p) => ({
+            id: p.id,
+            title: p.title,
+            content: p.body || '',
+            summary: p.metadata?.summary || (p.body ? p.body.substring(0, 160) + '...' : ''),
+            category: p.category,
+            imageUrl: p.media_url || undefined,
+            isPublicWeb: p.is_published,
+            targetAudience: p.metadata?.targetAudience || 'TOUS',
+            status: p.is_published ? 'PUBLIÉ' : 'BROUILLON',
+            publishDate: p.created_at ? p.created_at.substring(0, 10) : new Date().toISOString().substring(0, 10),
+            createdAt: p.created_at || new Date().toISOString(),
+            authorName: p.author || 'Bureau Pastoral',
+            viewCount: p.metadata?.viewCount || 1,
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn('Erreur bootstrap données initiales Supabase:', err);
+    }
   },
 };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ContentProvider } from './contexts/ContentContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
@@ -10,6 +11,7 @@ import { MemberBadgeModal } from './components/common/MemberBadgeModal';
 
 // Client Supabase
 import { supabase } from './supabaseClient';
+import { apiClient } from './services/apiClient';
 
 // Pages
 import { DashboardPage } from './pages/DashboardPage';
@@ -86,6 +88,8 @@ const MainApp: React.FC = () => {
             console.log('Connexion Supabase active. Session active :', Boolean(data?.session));
           }
         }
+        // Hydratation initiale globale depuis les tables Supabase app_content et dynamic_posts
+        await apiClient.bootstrapInitialDataFromSupabase();
       } catch (err) {
         console.warn('Impossible de contacter Supabase (chargement secours actif) :', err);
       }
@@ -140,7 +144,7 @@ const MainApp: React.FC = () => {
   // If viewing the public homepage, render it in full-bleed mode
   if (currentPage === 'public-home') {
     return (
-      <div className="min-h-screen bg-[#FCFCFD]">
+      <div className="min-h-screen bg-[#FCFCFD] dark:bg-[#0B0204] text-slate-800 dark:text-slate-100 transition-colors duration-200">
         <PublicHomePage
           onGoToDashboard={() => {
             if (currentUser) {
@@ -259,7 +263,7 @@ const MainApp: React.FC = () => {
       case 'testimonials':
         return <TestimonialsPage />;
       case 'forum':
-        return <ForumPage />;
+        return <ForumPage onNavigate={(page) => setCurrentPage(page)} />;
       case 'verses':
         return <VersesPage />;
       case 'resources':
@@ -316,7 +320,7 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FCFCFD] flex flex-col font-sans selection:bg-[#C99B2E] selection:text-[#4A0E17]">
+    <div className="min-h-screen bg-[#FCFCFD] dark:bg-[#0B0204] text-slate-800 dark:text-slate-100 flex flex-col font-sans selection:bg-[#C99B2E] selection:text-[#4A0E17] transition-colors duration-200">
       {/* Top Header */}
       <Header
         onToggleMobileMenu={() => setMobileMenuOpen(true)}
@@ -381,11 +385,13 @@ const MainApp: React.FC = () => {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <ContentProvider>
-          <MainApp />
-        </ContentProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ContentProvider>
+            <MainApp />
+          </ContentProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

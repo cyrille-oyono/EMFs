@@ -138,9 +138,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
         },
         {
           id: 'forum',
-          label: 'Forum Fraternel',
+          label: 'Forum Chrétien',
           icon: MessageSquare,
-          visible: settings.modules.forumEnabled,
+          visible: settings.modules.forumEnabled ?? true,
+          badge: 'Édification',
         },
         {
           id: 'verses',
@@ -222,7 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
   ];
 
   return (
-    <aside className="w-64 bg-[#4A0E17] text-rose-100 flex-shrink-0 flex flex-col border-r border-[#6E1325] min-h-[calc(100vh-57px)] select-none">
+    <aside className="w-64 bg-[#4A0E17] dark:bg-[#120306] text-rose-100 flex-shrink-0 flex flex-col border-r border-[#6E1325] dark:border-[#38070F] min-h-[calc(100vh-57px)] select-none transition-colors duration-300">
       <div className="flex-1 py-4 px-3 space-y-5 overflow-y-auto">
         {/* Toggle Box: Accès Requêtes de Prière */}
         <div className="p-2.5 rounded-xl bg-gradient-to-r from-[#6E1325] to-[#3B0810] border border-[#C99B2E]/30 shadow-xs space-y-2">

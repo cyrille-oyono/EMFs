@@ -192,6 +192,10 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setLatestServiceMedia(contentData);
         } else if (sectionKey === 'homepage_sections' && Array.isArray(contentData)) {
           setSections(contentData.filter((s: any) => s.isVisible));
+        } else if (sectionKey === 'events' && Array.isArray(contentData)) {
+          setEvents(contentData);
+        } else if (sectionKey === 'testimonials' && Array.isArray(contentData)) {
+          setTestimonials(contentData);
         }
         setLastSyncedTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       });
@@ -202,14 +206,28 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // 2. Souscription temps réel à la table dynamic_posts
     let unsubDynamicPosts = () => {};
     try {
-      unsubDynamicPosts = subscribeToDynamicPosts(() => {
+      unsubDynamicPosts = subscribeToDynamicPosts((payload) => {
         if (!isMounted) return;
-        apiClient.getDynamicPosts().then((posts) => {
-          if (isMounted && posts) {
-            setDynamicPosts(posts);
-            setLastSyncedTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-          }
-        }).catch(() => {});
+        if (payload.eventType === 'INSERT' && payload.newPost) {
+          setDynamicPosts((prev) => {
+            const exists = prev.some((p) => p.id === payload.newPost?.id);
+            if (exists) return prev;
+            return [payload.newPost!, ...prev];
+          });
+        } else if (payload.eventType === 'UPDATE' && payload.newPost) {
+          setDynamicPosts((prev) =>
+            prev.map((p) => (p.id === payload.newPost?.id ? payload.newPost! : p))
+          );
+        } else if (payload.eventType === 'DELETE' && payload.oldPostId) {
+          setDynamicPosts((prev) => prev.filter((p) => p.id !== payload.oldPostId));
+        } else {
+          apiClient.getDynamicPosts().then((posts) => {
+            if (isMounted && posts) {
+              setDynamicPosts(posts);
+            }
+          }).catch(() => {});
+        }
+        setLastSyncedTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       });
     } catch (e) {
       console.warn('Erreur souscription subscribeToDynamicPosts:', e);
