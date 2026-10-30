@@ -133,65 +133,115 @@ export interface DatabaseState {
   notifications: AppNotification[];
   resources: ChurchResource[];
   weeklyPrograms: WeeklyProgram[];
+  isInitialized?: boolean;
 }
 
 function loadInitialDatabase(): DatabaseState {
-  // Suppression de tout stockage purement local (localStorage) selon la directive utilisateur.
-  // La source de vérité unique est Supabase (app_content et dynamic_posts).
+  // 1. Essayer de charger depuis le stockage local (persistance indestructible)
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {}
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && parsed.settings) {
+          return {
+            ...parsed,
+            isInitialized: true,
+            // Conserver fidèlement les choix de l'administrateur, y compris les suppressions
+            carouselSlides: Array.isArray(parsed.carouselSlides) ? parsed.carouselSlides : [...INITIAL_CAROUSEL_SLIDES],
+            weeklyPrograms: Array.isArray(parsed.weeklyPrograms) ? parsed.weeklyPrograms : [...INITIAL_WEEKLY_PROGRAMS],
+            media: Array.isArray(parsed.media) ? parsed.media : [...INITIAL_MEDIA],
+            events: Array.isArray(parsed.events) ? parsed.events : [...INITIAL_EVENTS],
+            testimonials: Array.isArray(parsed.testimonials) ? parsed.testimonials : [...INITIAL_TESTIMONIALS],
+            users: Array.isArray(parsed.users) && parsed.users.length > 0 ? parsed.users : [...INITIAL_USERS],
+            latestServiceMedia: parsed.latestServiceMedia || JSON.parse(JSON.stringify(INITIAL_LATEST_SERVICE_MEDIA)),
+            settings: {
+              ...INITIAL_SETTINGS,
+              ...(parsed.settings || {}),
+              socials: { ...INITIAL_SETTINGS.socials, ...(parsed.settings?.socials || {}) },
+              theme: { ...INITIAL_SETTINGS.theme, ...(parsed.settings?.theme || {}) },
+              modules: { ...INITIAL_SETTINGS.modules, ...(parsed.settings?.modules || {}) },
+              treasury: { ...INITIAL_SETTINGS.treasury, ...(parsed.settings?.treasury || {}) },
+            },
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Erreur lecture base locale:', e);
+    }
   }
+
+  // 2. Si aucune donnée sauvegardée n'existe encore, initialiser avec le jeu par défaut
   return {
-    settings: INITIAL_SETTINGS,
-    users: INITIAL_USERS,
-    members: INITIAL_MEMBERS,
-    families: INITIAL_FAMILIES,
-    ministries: INITIAL_MINISTRIES,
-    departments: INITIAL_DEPARTMENTS,
-    attendanceSessions: INITIAL_SESSIONS,
-    attendanceRecords: INITIAL_ATTENDANCE_RECORDS,
-    transactions: INITIAL_TRANSACTIONS,
-    transactionCategories: INITIAL_CATEGORIES,
-    events: INITIAL_EVENTS,
+    isInitialized: true,
+    settings: JSON.parse(JSON.stringify(INITIAL_SETTINGS)),
+    users: JSON.parse(JSON.stringify(INITIAL_USERS)),
+    members: JSON.parse(JSON.stringify(INITIAL_MEMBERS)),
+    families: JSON.parse(JSON.stringify(INITIAL_FAMILIES)),
+    ministries: JSON.parse(JSON.stringify(INITIAL_MINISTRIES)),
+    departments: JSON.parse(JSON.stringify(INITIAL_DEPARTMENTS)),
+    attendanceSessions: JSON.parse(JSON.stringify(INITIAL_SESSIONS)),
+    attendanceRecords: JSON.parse(JSON.stringify(INITIAL_ATTENDANCE_RECORDS)),
+    transactions: JSON.parse(JSON.stringify(INITIAL_TRANSACTIONS)),
+    transactionCategories: JSON.parse(JSON.stringify(INITIAL_CATEGORIES)),
+    events: JSON.parse(JSON.stringify(INITIAL_EVENTS)),
     eventParticipants: [],
-    announcements: INITIAL_ANNOUNCEMENTS,
-    testimonials: INITIAL_TESTIMONIALS,
-    forumCategories: INITIAL_FORUM_CATEGORIES,
-    forumTopics: INITIAL_FORUM_TOPICS,
-    forumPosts: INITIAL_FORUM_POSTS,
+    announcements: JSON.parse(JSON.stringify(INITIAL_ANNOUNCEMENTS)),
+    testimonials: JSON.parse(JSON.stringify(INITIAL_TESTIMONIALS)),
+    forumCategories: JSON.parse(JSON.stringify(INITIAL_FORUM_CATEGORIES)),
+    forumTopics: JSON.parse(JSON.stringify(INITIAL_FORUM_TOPICS)),
+    forumPosts: JSON.parse(JSON.stringify(INITIAL_FORUM_POSTS)),
     forumReports: [],
-    bibleVerses: INITIAL_BIBLE_VERSES,
-    media: INITIAL_MEDIA,
-    parakletosYears: INITIAL_PARAKLETOS_YEARS,
-    parakletosClasses: INITIAL_PARAKLETOS_CLASSES,
-    parakletosSubjects: INITIAL_PARAKLETOS_SUBJECTS,
-    parakletosStudents: INITIAL_PARAKLETOS_STUDENTS,
-    parakletosGrades: INITIAL_PARAKLETOS_GRADES,
-    parakletosInfo: INITIAL_PARAKLETOS_INFO,
-    parakletosTeachers: INITIAL_PARAKLETOS_TEACHERS,
-    parakletosAdmissions: INITIAL_PARAKLETOS_ADMISSIONS,
-    cmsState: INITIAL_CMS_STATE,
+    bibleVerses: JSON.parse(JSON.stringify(INITIAL_BIBLE_VERSES)),
+    media: JSON.parse(JSON.stringify(INITIAL_MEDIA)),
+    parakletosYears: JSON.parse(JSON.stringify(INITIAL_PARAKLETOS_YEARS)),
+    parakletosClasses: JSON.parse(JSON.stringify(INITIAL_PARAKLETOS_CLASSES)),
+    parakletosSubjects: JSON.parse(JSON.stringify(INITIAL_PARAKLETOS_SUBJECTS)),
+    parakletosStudents: JSON.parse(JSON.stringify(INITIAL_PARAKLETOS_STUDENTS)),
+    parakletosGrades: JSON.parse(JSON.stringify(INITIAL_PARAKLETOS_GRADES)),
+    parakletosInfo: JSON.parse(JSON.stringify(INITIAL_PARAKLETOS_INFO)),
+    parakletosTeachers: JSON.parse(JSON.stringify(INITIAL_PARAKLETOS_TEACHERS)),
+    parakletosAdmissions: JSON.parse(JSON.stringify(INITIAL_PARAKLETOS_ADMISSIONS)),
+    cmsState: JSON.parse(JSON.stringify(INITIAL_CMS_STATE)),
     auditLogs: [],
     backups: [],
-    prayerRequests: INITIAL_PRAYER_REQUESTS,
-    associatedChurches: INITIAL_ASSOCIATED_CHURCHES,
-    homeCells: INITIAL_HOME_CELLS,
+    prayerRequests: JSON.parse(JSON.stringify(INITIAL_PRAYER_REQUESTS)),
+    associatedChurches: JSON.parse(JSON.stringify(INITIAL_ASSOCIATED_CHURCHES)),
+    homeCells: JSON.parse(JSON.stringify(INITIAL_HOME_CELLS)),
     ministryAdhesions: [],
-    carouselSlides: INITIAL_CAROUSEL_SLIDES,
-    latestServiceMedia: INITIAL_LATEST_SERVICE_MEDIA,
-    notifications: INITIAL_NOTIFICATIONS,
-    resources: INITIAL_RESOURCES,
-    weeklyPrograms: INITIAL_WEEKLY_PROGRAMS,
+    carouselSlides: JSON.parse(JSON.stringify(INITIAL_CAROUSEL_SLIDES)),
+    latestServiceMedia: JSON.parse(JSON.stringify(INITIAL_LATEST_SERVICE_MEDIA)),
+    notifications: JSON.parse(JSON.stringify(INITIAL_NOTIFICATIONS)),
+    resources: JSON.parse(JSON.stringify(INITIAL_RESOURCES)),
+    weeklyPrograms: JSON.parse(JSON.stringify(INITIAL_WEEKLY_PROGRAMS)),
   };
 }
 
 let db: DatabaseState = loadInitialDatabase();
 
 function persistDatabase() {
-  // Pas de stockage purement local (localStorage) selon la directive utilisateur.
-  // Toutes les données sont persistées en direct dans Supabase (app_content, dynamic_posts).
+  db.isInitialized = true;
+  // 1. Sauvegarde instantanée dans localStorage
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    } catch (e) {
+      console.warn('Erreur persistance localStorage:', e);
+    }
+  }
+
+  // 2. Persistance asynchrone sur le disque serveur via /api/storage
+  if (typeof window !== 'undefined' && typeof fetch === 'function') {
+    try {
+      fetch('/api/storage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(db),
+      }).catch(() => {
+        // Ignorer les erreurs réseau silencieuses
+      });
+    } catch {}
+  }
 }
 
 export const Storage = {
@@ -2639,8 +2689,8 @@ export const Storage = {
 
   // Homepage Carousel Slides
   getCarouselSlides(): HomepageCarouselSlide[] {
-    if (!Array.isArray(db.carouselSlides) || db.carouselSlides.length === 0) {
-      db.carouselSlides = [...INITIAL_CAROUSEL_SLIDES];
+    if (!Array.isArray(db.carouselSlides)) {
+      db.carouselSlides = [];
       persistDatabase();
     }
     return [...db.carouselSlides].sort((a, b) => (a?.order || 0) - (b?.order || 0));
@@ -2715,13 +2765,15 @@ export const Storage = {
 
   // Latest Service Media (Photos & Videos)
   getLatestServiceMedia(): LatestServiceMedia {
-    if (
-      !db.latestServiceMedia ||
-      !Array.isArray(db.latestServiceMedia.photos) ||
-      !Array.isArray(db.latestServiceMedia.videos)
-    ) {
+    if (!db.latestServiceMedia) {
       db.latestServiceMedia = JSON.parse(JSON.stringify(INITIAL_LATEST_SERVICE_MEDIA));
       persistDatabase();
+    }
+    if (!Array.isArray(db.latestServiceMedia.photos)) {
+      db.latestServiceMedia.photos = [];
+    }
+    if (!Array.isArray(db.latestServiceMedia.videos)) {
+      db.latestServiceMedia.videos = [];
     }
     return db.latestServiceMedia;
   },
@@ -3038,8 +3090,8 @@ export const Storage = {
 
   // Weekly Programs (Programmes Hebdomadaires)
   getWeeklyPrograms(): WeeklyProgram[] {
-    if (!Array.isArray(db.weeklyPrograms) || db.weeklyPrograms.length === 0) {
-      db.weeklyPrograms = JSON.parse(JSON.stringify(INITIAL_WEEKLY_PROGRAMS));
+    if (!Array.isArray(db.weeklyPrograms)) {
+      db.weeklyPrograms = [];
       persistDatabase();
     }
     return [...db.weeklyPrograms].sort((a, b) => (a?.order || 0) - (b?.order || 0));
@@ -3167,4 +3219,59 @@ export const Storage = {
     }
     return [...db.weeklyPrograms].sort((a, b) => a.order - b.order);
   },
+
+  // Suppression définitive de tous les exemples et médias initiaux (Images, Vidéos, Carrousel)
+  purgeAllInitialMedia(currentUser?: User): { success: boolean; deletedCount: number } {
+    const photoCount = db.latestServiceMedia?.photos?.length || 0;
+    const videoCount = db.latestServiceMedia?.videos?.length || 0;
+    const mediaCount = db.media?.length || 0;
+    const slideCount = db.carouselSlides?.length || 0;
+    const total = photoCount + videoCount + mediaCount + slideCount;
+
+    if (db.latestServiceMedia) {
+      db.latestServiceMedia.photos = [];
+      db.latestServiceMedia.videos = [];
+      db.latestServiceMedia.updatedAt = new Date().toISOString();
+    }
+    db.media = [];
+    db.carouselSlides = [];
+    persistDatabase();
+
+    if (currentUser) {
+      Storage.logAudit(
+        'PURGE_MEDIAS_INITIAUX',
+        'Médiathèque & CMS',
+        'Media',
+        `Suppression définitive de tous les exemples et médias initiaux (${total} éléments supprimés)`,
+        { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, role: currentUser.role }
+      );
+    }
+    return { success: true, deletedCount: total };
+  },
+
+  // Synchronisation avec la sauvegarde sur le serveur au démarrage
+  async initPersistence(): Promise<void> {
+    if (typeof window === 'undefined' || typeof fetch !== 'function') return;
+    try {
+      const res = await fetch('/api/storage');
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.success && json?.data && json.data.settings) {
+          // Fusionner avec la base active
+          db = {
+            ...db,
+            ...json.data,
+            isInitialized: true,
+          };
+          // Mettre également à jour le stockage local
+          try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+          } catch {}
+        }
+      }
+    } catch (e) {
+      // Ignorer si hors-ligne ou dev mode
+    }
+  },
 };
+

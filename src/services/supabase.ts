@@ -184,8 +184,8 @@ export function mergeWithDefaultCMS(remote?: Partial<SupabaseCMSPayload> | any |
 
   return {
     cmsState,
-    carouselSlides: Array.isArray(slides) && slides.length > 0 ? slides.filter(Boolean) : INITIAL_CAROUSEL_SLIDES,
-    weeklyPrograms: Array.isArray(programs) && programs.length > 0 ? programs.filter(Boolean) : INITIAL_WEEKLY_PROGRAMS,
+    carouselSlides: Array.isArray(slides) ? slides.filter(Boolean) : INITIAL_CAROUSEL_SLIDES,
+    weeklyPrograms: Array.isArray(programs) ? programs.filter(Boolean) : INITIAL_WEEKLY_PROGRAMS,
     updatedAt: remote?.updatedAt || new Date().toISOString(),
     updatedBy: remote?.updatedBy || 'Bureau Pastoral',
   };
@@ -199,17 +199,13 @@ export function mergeWithDefaultLatestMedia(remote?: Partial<LatestServiceMedia>
   return {
     ...INITIAL_LATEST_SERVICE_MEDIA,
     ...remote,
-    serviceTitle: remote.serviceTitle || INITIAL_LATEST_SERVICE_MEDIA.serviceTitle,
-    serviceDate: remote.serviceDate || INITIAL_LATEST_SERVICE_MEDIA.serviceDate,
-    preacherName: remote.preacherName || INITIAL_LATEST_SERVICE_MEDIA.preacherName,
-    themePassage: remote.themePassage || INITIAL_LATEST_SERVICE_MEDIA.themePassage,
-    summary: remote.summary || INITIAL_LATEST_SERVICE_MEDIA.summary,
-    photos: Array.isArray(remote.photos) && remote.photos.length > 0
-      ? remote.photos.filter(Boolean)
-      : INITIAL_LATEST_SERVICE_MEDIA.photos,
-    videos: Array.isArray(remote.videos) && remote.videos.length > 0
-      ? remote.videos.filter(Boolean)
-      : INITIAL_LATEST_SERVICE_MEDIA.videos,
+    serviceTitle: remote.serviceTitle !== undefined ? remote.serviceTitle : INITIAL_LATEST_SERVICE_MEDIA.serviceTitle,
+    serviceDate: remote.serviceDate !== undefined ? remote.serviceDate : INITIAL_LATEST_SERVICE_MEDIA.serviceDate,
+    preacherName: remote.preacherName !== undefined ? remote.preacherName : INITIAL_LATEST_SERVICE_MEDIA.preacherName,
+    themePassage: remote.themePassage !== undefined ? remote.themePassage : INITIAL_LATEST_SERVICE_MEDIA.themePassage,
+    summary: remote.summary !== undefined ? remote.summary : INITIAL_LATEST_SERVICE_MEDIA.summary,
+    photos: Array.isArray(remote.photos) ? remote.photos.filter(Boolean) : INITIAL_LATEST_SERVICE_MEDIA.photos,
+    videos: Array.isArray(remote.videos) ? remote.videos.filter(Boolean) : INITIAL_LATEST_SERVICE_MEDIA.videos,
   };
 }
 

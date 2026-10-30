@@ -1359,25 +1359,25 @@ export const apiClient = {
       if (allContent['homepage_cms']?.cmsState) {
         Storage.setCMSState(allContent['homepage_cms'].cmsState);
       }
-      if (Array.isArray(allContent['carousel_slides']) && allContent['carousel_slides'].length > 0) {
+      if (Array.isArray(allContent['carousel_slides'])) {
         Storage.setCarouselSlides(allContent['carousel_slides']);
       }
-      if (Array.isArray(allContent['weekly_programs']) && allContent['weekly_programs'].length > 0) {
+      if (Array.isArray(allContent['weekly_programs'])) {
         Storage.setWeeklyPrograms(allContent['weekly_programs']);
       }
       if (allContent['latest_service_media']) {
         Storage.updateLatestServiceMedia(allContent['latest_service_media']);
       }
-      if (Array.isArray(allContent['events']) && allContent['events'].length > 0) {
+      if (Array.isArray(allContent['events'])) {
         Storage.setEvents(allContent['events']);
       }
-      if (Array.isArray(allContent['forum_topics']) && allContent['forum_topics'].length > 0) {
+      if (Array.isArray(allContent['forum_topics'])) {
         Storage.setForumTopics(allContent['forum_topics']);
       }
-      if (Array.isArray(allContent['forum_posts']) && allContent['forum_posts'].length > 0) {
+      if (Array.isArray(allContent['forum_posts'])) {
         Storage.setForumPosts(allContent['forum_posts']);
       }
-      if (Array.isArray(allContent['prayer_requests']) && allContent['prayer_requests'].length > 0) {
+      if (Array.isArray(allContent['prayer_requests'])) {
         Storage.setPrayerRequests(allContent['prayer_requests']);
       }
 
@@ -1405,6 +1405,26 @@ export const apiClient = {
     } catch (err) {
       console.warn('Erreur bootstrap données initiales Supabase:', err);
     }
+  },
+
+  // Suppression définitive de tous les exemples et médias initiaux
+  async purgeAllInitialMedia(user?: User): Promise<{ success: boolean; deletedCount: number }> {
+    const res = Storage.purgeAllInitialMedia(user);
+    if (isSupabaseConfigured()) {
+      try {
+        await Promise.all([
+          saveAppContent('latest_service_media', Storage.getLatestServiceMedia()),
+          saveAppContent('carousel_slides', []),
+          saveAppContent('media', []),
+          apiClient.syncFullCMSToSupabase(user),
+        ]);
+      } catch (err) {
+        console.warn('Erreur synchro purge Supabase:', err);
+      }
+    }
+    churchSyncService.broadcastMediaUpdated(Storage.getLatestServiceMedia());
+    churchSyncService.broadcastCmsUpdated();
+    return res;
   },
 };
 
