@@ -97,7 +97,7 @@ class ChurchSyncService {
       try {
         listener(event);
       } catch (err) {
-        console.error('Error in ChurchSyncService listener:', err);
+        console.warn('Notice in ChurchSyncService listener:', err);
       }
     });
   }

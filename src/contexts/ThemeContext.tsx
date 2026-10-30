@@ -16,10 +16,15 @@ const THEME_STORAGE_KEY = 'emf_theme_preference';
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const stored = window.localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
-        if (stored === 'dark' || stored === 'light' || stored === 'system') {
-          return stored;
+      if (typeof window !== 'undefined') {
+        if (window.localStorage) {
+          window.localStorage.removeItem(THEME_STORAGE_KEY);
+        }
+        if (window.sessionStorage) {
+          const stored = window.sessionStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
+          if (stored === 'dark' || stored === 'light' || stored === 'system') {
+            return stored;
+          }
         }
       }
     } catch {}
@@ -82,8 +87,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setTheme = useCallback((mode: ThemeMode) => {
     setThemeState(mode);
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(THEME_STORAGE_KEY, mode);
+      if (typeof window !== 'undefined') {
+        if (window.sessionStorage) {
+          window.sessionStorage.setItem(THEME_STORAGE_KEY, mode);
+        }
+        if (window.localStorage) {
+          window.localStorage.removeItem(THEME_STORAGE_KEY);
+        }
       }
     } catch {}
   }, []);

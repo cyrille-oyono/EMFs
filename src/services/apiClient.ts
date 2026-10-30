@@ -110,7 +110,7 @@ export const apiClient = {
       try {
         await saveChurchSettingsToSupabase(res);
       } catch (err) {
-        console.error('Erreur lors de la sauvegarde dans Supabase:', err);
+        console.warn('Notice sauvegarde dans Supabase:', err);
       }
     }
 
@@ -341,7 +341,7 @@ export const apiClient = {
           return ann;
         }
       } catch (err) {
-        console.error('Erreur createAnnouncement dans dynamic_posts:', err);
+        console.warn('Notice createAnnouncement dans dynamic_posts:', err);
       }
     }
     churchSyncService.broadcastAgendaUpdated({ message: `Nouvelle publication : ${data.title}` });
@@ -354,7 +354,7 @@ export const apiClient = {
       try {
         await deleteDynamicPost(id);
       } catch (err) {
-        console.error('Erreur deleteAnnouncement dans dynamic_posts:', err);
+        console.warn('Notice deleteAnnouncement dans dynamic_posts:', err);
       }
     }
     churchSyncService.broadcastAgendaUpdated({ message: 'Publication supprimée' });
@@ -685,7 +685,7 @@ export const apiClient = {
       churchSyncService.broadcastCmsUpdated();
       return res;
     } catch (err: any) {
-      console.error('Erreur syncFullCMSToSupabase:', err);
+      console.warn('Notice syncFullCMSToSupabase:', err);
       return { success: false, error: err?.message || 'Erreur lors de la synchronisation' };
     }
   },
@@ -742,7 +742,7 @@ export const apiClient = {
       try {
         await apiClient.syncFullCMSToSupabase(user);
       } catch (err) {
-        console.error('Erreur publication CMS dans Supabase:', err);
+        console.warn('Notice publication CMS dans Supabase:', err);
       }
     }
     churchSyncService.broadcastCmsUpdated();
@@ -755,7 +755,7 @@ export const apiClient = {
       try {
         await apiClient.syncFullCMSToSupabase(user);
       } catch (err) {
-        console.error('Erreur restauration CMS dans Supabase:', err);
+        console.warn('Notice restauration CMS dans Supabase:', err);
       }
     }
     churchSyncService.broadcastCmsUpdated();
@@ -771,7 +771,7 @@ export const apiClient = {
           apiClient.syncFullCMSToSupabase(user),
         ]);
       } catch (err) {
-        console.error('Erreur Supabase homepage settings:', err);
+        console.warn('Notice Supabase homepage settings:', err);
       }
     }
     churchSyncService.broadcastCmsUpdated();
@@ -789,7 +789,7 @@ export const apiClient = {
           apiClient.syncFullCMSToSupabase(user),
         ]);
       } catch (err) {
-        console.error('Erreur Supabase presentation image:', err);
+        console.warn('Notice Supabase presentation image:', err);
       }
     }
     churchSyncService.broadcastCmsUpdated();
@@ -811,15 +811,39 @@ export const apiClient = {
     newEmail?: string,
     user?: User
   ): Promise<{ success: boolean; user?: User; error?: string }> {
-    return Storage.updateUserPassword(userId, newPassword, newEmail, user);
+    const res = Storage.updateUserPassword(userId, newPassword, newEmail, user);
+    if (res.success && isSupabaseConfigured()) {
+      try {
+        await saveAppContent('church_users', Storage.getUsersWithCredentials());
+      } catch (e) {
+        console.warn('Sync users to Supabase:', e);
+      }
+    }
+    return res;
   },
 
   async createUser(data: Partial<User>, user?: User): Promise<User> {
-    return Storage.createUser(data, user);
+    const res = Storage.createUser(data, user);
+    if (isSupabaseConfigured()) {
+      try {
+        await saveAppContent('church_users', Storage.getUsersWithCredentials());
+      } catch (e) {
+        console.warn('Sync users to Supabase:', e);
+      }
+    }
+    return res;
   },
 
   async updateUser(id: string, data: Partial<User>, user?: User): Promise<User | null> {
-    return Storage.updateUser(id, data, user);
+    const res = Storage.updateUser(id, data, user);
+    if (res && isSupabaseConfigured()) {
+      try {
+        await saveAppContent('church_users', Storage.getUsersWithCredentials());
+      } catch (e) {
+        console.warn('Sync users to Supabase:', e);
+      }
+    }
+    return res;
   },
 
   // Audits
@@ -1218,7 +1242,7 @@ export const apiClient = {
         const full = Storage.getSettings();
         await saveChurchSettingsToSupabase(full);
       } catch (err) {
-        console.error('Erreur Supabase treasury:', err);
+        console.warn('Notice Supabase treasury:', err);
       }
     }
     churchSyncService.broadcastSettingsUpdated(Storage.getSettings());
@@ -1242,7 +1266,15 @@ export const apiClient = {
     },
     user?: User
   ): Promise<{ success: boolean; user?: any; error?: string }> {
-    return Storage.updateKeyOfficer(userId, data, user);
+    const res = Storage.updateKeyOfficer(userId, data, user);
+    if (res.success && isSupabaseConfigured()) {
+      try {
+        await saveAppContent('church_users', Storage.getUsersWithCredentials());
+      } catch (e) {
+        console.warn('Sync users to Supabase:', e);
+      }
+    }
+    return res;
   },
 
   // Church Resources (Enseignements & Prières)
@@ -1376,6 +1408,15 @@ export const apiClient = {
       }
       if (Array.isArray(allContent['forum_posts'])) {
         Storage.setForumPosts(allContent['forum_posts']);
+      }
+      if (Array.isArray(allContent['church_users']) && allContent['church_users'].length > 0) {
+        Storage.setUsers(allContent['church_users']);
+      }
+      if (Array.isArray(allContent['church_members']) && allContent['church_members'].length > 0) {
+        Storage.setMembers(allContent['church_members']);
+      }
+      if (Array.isArray(allContent['transactions']) && allContent['transactions'].length > 0) {
+        Storage.setTransactions(allContent['transactions']);
       }
       if (Array.isArray(allContent['prayer_requests'])) {
         Storage.setPrayerRequests(allContent['prayer_requests']);

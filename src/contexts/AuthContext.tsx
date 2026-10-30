@@ -84,19 +84,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const init = async () => {
       try {
-        // Lecture sécurisée du compte utilisateur local
+        // Lecture sécurisée de la session courante (sessionStorage, pas de stockage local persistant)
         try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            const savedUser = window.localStorage.getItem('EMF_AUTH_USER');
-            if (savedUser) {
-              const parsed = JSON.parse(savedUser);
-              if (parsed && typeof parsed === 'object') {
-                setCurrentUser(parsed);
+          if (typeof window !== 'undefined') {
+            // Nettoyage absolu de localStorage pour éliminer tout stockage local persistant
+            if (window.localStorage) {
+              window.localStorage.removeItem('EMF_AUTH_USER');
+            }
+            if (window.sessionStorage) {
+              const savedUser = window.sessionStorage.getItem('EMF_AUTH_USER');
+              if (savedUser) {
+                const parsed = JSON.parse(savedUser);
+                if (parsed && typeof parsed === 'object') {
+                  setCurrentUser(parsed);
+                }
               }
             }
           }
         } catch (localErr) {
-          console.warn('Erreur lecture session locale:', localErr);
+          console.warn('Erreur lecture session:', localErr);
         }
 
         // Récupération des paramètres avec fallback immédiat
@@ -128,16 +134,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const safeSetItem = (key: string, val: string) => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(key, val);
+      if (typeof window !== 'undefined') {
+        if (window.sessionStorage) {
+          window.sessionStorage.setItem(key, val);
+        }
+        if (window.localStorage) {
+          window.localStorage.removeItem(key);
+        }
       }
     } catch {}
   };
 
   const safeRemoveItem = (key: string) => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem(key);
+      if (typeof window !== 'undefined') {
+        if (window.sessionStorage) {
+          window.sessionStorage.removeItem(key);
+        }
+        if (window.localStorage) {
+          window.localStorage.removeItem(key);
+        }
       }
     } catch {}
   };

@@ -35,8 +35,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private handleClearAndReload = () => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem('EMF_AUTH_USER');
+      if (typeof window !== 'undefined') {
+        if (window.sessionStorage) {
+          window.sessionStorage.clear();
+        }
+        if (window.localStorage) {
+          window.localStorage.clear();
+        }
       }
       window.location.href = '/';
     } catch {

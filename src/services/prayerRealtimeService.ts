@@ -31,10 +31,17 @@ class PrayerRealtimeService {
   private audioCtx: AudioContext | null = null;
 
   constructor() {
-    // Load sound preference from localStorage
+    // Load sound preference from sessionStorage and purge localStorage
     try {
-      const stored = localStorage.getItem('emf_prayer_sound_enabled');
-      this.soundEnabled = stored !== null ? stored === 'true' : true;
+      if (typeof window !== 'undefined') {
+        if (window.localStorage) {
+          window.localStorage.removeItem('emf_prayer_sound_enabled');
+        }
+        if (window.sessionStorage) {
+          const stored = window.sessionStorage.getItem('emf_prayer_sound_enabled');
+          this.soundEnabled = stored !== null ? stored === 'true' : true;
+        }
+      }
     } catch {
       this.soundEnabled = true;
     }
@@ -278,7 +285,14 @@ class PrayerRealtimeService {
   public setSoundEnabled(enabled: boolean): void {
     this.soundEnabled = enabled;
     try {
-      localStorage.setItem('emf_prayer_sound_enabled', String(enabled));
+      if (typeof window !== 'undefined') {
+        if (window.sessionStorage) {
+          window.sessionStorage.setItem('emf_prayer_sound_enabled', String(enabled));
+        }
+        if (window.localStorage) {
+          window.localStorage.removeItem('emf_prayer_sound_enabled');
+        }
+      }
     } catch {}
   }
 
