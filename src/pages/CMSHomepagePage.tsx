@@ -90,9 +90,10 @@ export const CMSHomepagePage: React.FC<CMSHomepagePageProps> = ({ onPreviewPubli
     }
     try {
       setIsUploadingImage(true);
-      const compressed = await compressImageFile(file, 1600, 1200, 0.85);
+      // Dimensions augmentées à 2560x1920 (Haute Définition / 2K) pour un affichage éclatant en grand format
+      const compressed = await compressImageFile(file, 2560, 1920, 0.88);
       handleFieldChange('imageUrl', compressed.dataUrl);
-      showToast('✓ Photo chargée depuis le téléphone et optimisée !');
+      showToast('✓ Photo haute résolution chargée depuis le téléphone et optimisée !');
     } catch (err) {
       console.error(err);
       showToast('Erreur lors du traitement de la photo.');
@@ -725,12 +726,15 @@ export const CMSHomepagePage: React.FC<CMSHomepagePageProps> = ({ onPreviewPubli
                   />
 
                   {selectedSection.imageUrl && !selectedSection.imageUrl.includes('511795409834') && (
-                    <div className="relative mt-2 h-36 w-full rounded-xl overflow-hidden border border-slate-200 group">
+                    <div className="relative mt-2 h-64 sm:h-72 w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 group shadow-md">
                       <img
                         src={selectedSection.imageUrl}
                         alt="Preview"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover object-center"
                       />
+                      <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-xs text-[#C99B2E] text-[10px] font-bold px-2.5 py-1 rounded-lg border border-[#C99B2E]/30">
+                        Aperçu Grand Format
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleFieldChange('imageUrl', '')}

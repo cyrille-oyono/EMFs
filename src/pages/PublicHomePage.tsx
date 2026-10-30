@@ -33,6 +33,8 @@ import {
   Image as ImageIcon,
   Lock,
   MessageSquare,
+  Maximize2,
+  ZoomIn,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -174,6 +176,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   const [programsModalCreateMode, setProgramsModalCreateMode] = useState(false);
   const [isFooterEditorOpen, setIsFooterEditorOpen] = useState(false);
   const [isPresentationImageModalOpen, setIsPresentationImageModalOpen] = useState(false);
+  const [isPresentationLightboxOpen, setIsPresentationLightboxOpen] = useState(false);
   const [selectedDayFilter, setSelectedDayFilter] = useState<string>('TOUS');
   const [eventsDisplayMode, setEventsDisplayMode] = useState<'calendar' | 'cards'>('calendar');
   const [isJoinCommunityOpen, setIsJoinCommunityOpen] = useState(false);
@@ -697,120 +700,150 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
         }}
       />
 
-      {/* Presentation Section */}
+      {/* Presentation Section - Grand Format & Dimensions Augmentées */}
       {presentationSec && (
-        <section id="about" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            <div className="lg:col-span-7 space-y-5">
+        <section id="about" className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+            {/* Left Column: Présentation textuelle */}
+            <div className="lg:col-span-6 space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-black uppercase tracking-wider text-[#C99B2E]">
-                  Présentation Institutionnelle
+                <div className="inline-flex items-center space-x-2 bg-amber-50 text-[#C99B2E] border border-amber-200 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+                  <Church className="w-3.5 h-3.5" />
+                  <span>Présentation Institutionnelle</span>
                 </div>
                 {(currentUser?.role === 'ADMIN' || currentUser?.role === 'PASTEUR') && (
                   <button
                     onClick={() => setIsPresentationImageModalOpen(true)}
                     className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-[#4A0E17] border border-[#C99B2E]/40 rounded-xl text-xs font-black transition shadow-xs cursor-pointer"
-                    title="Prendre ou charger la photo de l'église depuis votre téléphone"
+                    title="Prendre ou charger la photo de l'église depuis votre téléphone en grand format"
                   >
                     <Camera className="w-3.5 h-3.5 text-[#C99B2E]" />
-                    <span>Photo Église (Téléphone)</span>
+                    <span>Photo Église HD</span>
                   </button>
                 )}
               </div>
-              <h2 className="text-2xl sm:text-4xl font-black text-[#4A0E17] tracking-tight">
+
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#4A0E17] tracking-tight leading-tight">
                 {presentationSec.title || 'Qui Sommes-Nous ?'}
               </h2>
-              <p className="text-sm font-semibold text-slate-600">
+              <p className="text-sm sm:text-base font-semibold text-slate-600 leading-relaxed">
                 {presentationSec.subtitle}
               </p>
-              <div className="text-sm text-slate-700 leading-relaxed space-y-3">
+              <div className="text-sm sm:text-base text-slate-700 leading-relaxed space-y-3">
                 <p>{presentationSec.content}</p>
               </div>
 
               {/* Statistics Counters */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-200">
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs text-center">
-                  <div className="text-2xl font-black text-[#4A0E17]">150+</div>
-                  <div className="text-[11px] text-slate-500 font-medium">Familles Actives</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-4 border-t border-slate-200">
+                <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-xs text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-[#4A0E17]">150+</div>
+                  <div className="text-[11px] text-slate-500 font-semibold mt-0.5">Familles Actives</div>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs text-center">
-                  <div className="text-2xl font-black text-[#C99B2E]">4 / sem.</div>
-                  <div className="text-[11px] text-slate-500 font-medium">Cultes & Réunions</div>
+                <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-xs text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-[#C99B2E]">4 / sem.</div>
+                  <div className="text-[11px] text-slate-500 font-semibold mt-0.5">Cultes & Réunions</div>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs text-center">
-                  <div className="text-2xl font-black text-[#6E1325]">6</div>
-                  <div className="text-[11px] text-slate-500 font-medium">Ministères d’Impact</div>
+                <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-xs text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-[#6E1325]">6</div>
+                  <div className="text-[11px] text-slate-500 font-semibold mt-0.5">Ministères d’Impact</div>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs text-center">
-                  <div className="text-2xl font-black text-emerald-700">15+</div>
-                  <div className="text-[11px] text-slate-500 font-medium">Années à Sangmelima</div>
+                <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-xs text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-emerald-700">15+</div>
+                  <div className="text-[11px] text-slate-500 font-semibold mt-0.5">Années à Sangmelima</div>
                 </div>
               </div>
             </div>
 
-            <div className="lg:col-span-5 flex flex-col items-center justify-center w-full my-auto self-center text-center">
+            {/* Right Column: Grand Format Présentation Image (Dimensions Augmentées) */}
+            <div className="lg:col-span-6 flex flex-col items-center justify-center w-full my-auto self-center text-center">
               {presentationSec.imageUrl && !presentationSec.imageUrl.includes('511795409834') ? (
-                <div className="relative group rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-slate-900 w-full max-w-md lg:max-w-lg mx-auto flex items-center justify-center text-center">
+                <div className="relative group rounded-3xl overflow-hidden shadow-2xl border-4 border-white dark:border-slate-800 ring-2 ring-[#C99B2E]/40 bg-slate-950 w-full flex items-center justify-center text-center">
                   <img
                     src={presentationSec.imageUrl}
-                    alt="Communauté EMF Sangmelima"
-                    className="w-full h-80 sm:h-96 lg:h-[420px] object-cover object-center block mx-auto transition-transform duration-500 group-hover:scale-105"
+                    alt="Communauté EMF Sangmelima - Grand Temple d’Akon"
+                    onClick={() => setIsPresentationLightboxOpen(true)}
+                    className="w-full h-[420px] sm:h-[500px] md:h-[560px] lg:h-[620px] object-cover object-center block mx-auto transition-transform duration-700 group-hover:scale-105 cursor-pointer"
                     loading="lazy"
                   />
-                  {(currentUser?.role === 'ADMIN' || currentUser?.role === 'PASTEUR') && (
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
+
+                  {/* Header Badge on image */}
+                  <div className="absolute top-4 left-4 bg-slate-950/80 backdrop-blur-md text-[#C99B2E] border border-[#C99B2E]/40 text-xs font-black px-3.5 py-1.5 rounded-xl shadow-lg flex items-center space-x-2">
+                    <Church className="w-4 h-4 text-[#C99B2E]" />
+                    <span>Grand Temple d’Akon • Sangmelima</span>
+                  </div>
+
+                  {/* Bottom Actions Overlay */}
+                  <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex items-center justify-between pointer-events-none">
+                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'PASTEUR') && (
                       <button
-                        onClick={() => setIsPresentationImageModalOpen(true)}
-                        className="px-4 py-2.5 bg-white/95 hover:bg-white text-[#4A0E17] rounded-xl font-bold text-xs shadow-lg flex items-center space-x-2 transition cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsPresentationImageModalOpen(true);
+                        }}
+                        className="pointer-events-auto px-3.5 py-2 bg-white/95 hover:bg-white text-[#4A0E17] rounded-xl font-bold text-xs shadow-xl flex items-center space-x-2 transition cursor-pointer border border-[#C99B2E]/40"
                       >
                         <Camera className="w-4 h-4 text-[#C99B2E]" />
                         <span>Changer la photo (Téléphone)</span>
                       </button>
-                    </div>
-                  )}
+                    )}
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsPresentationLightboxOpen(true);
+                      }}
+                      className="pointer-events-auto ml-auto px-3.5 py-2 bg-slate-950/85 hover:bg-black text-white rounded-xl font-black text-xs shadow-xl flex items-center space-x-1.5 transition cursor-pointer border border-white/20 backdrop-blur-md"
+                    >
+                      <Maximize2 className="w-4 h-4 text-[#C99B2E]" />
+                      <span>Grand Format HD</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 /* No image uploaded yet */
                 currentUser?.role === 'ADMIN' || currentUser?.role === 'PASTEUR' ? (
                   <div
                     onClick={() => setIsPresentationImageModalOpen(true)}
-                    className="rounded-3xl border-2 border-dashed border-[#C99B2E] bg-gradient-to-br from-amber-50/60 to-rose-50/60 p-8 sm:p-10 text-center flex flex-col items-center justify-center space-y-4 hover:border-[#6E1325] transition shadow-md cursor-pointer group min-h-[320px] w-full max-w-md lg:max-w-lg mx-auto self-center"
+                    className="rounded-3xl border-2 border-dashed border-[#C99B2E] bg-gradient-to-br from-amber-50/70 via-rose-50/40 to-amber-50/70 p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-5 hover:border-[#6E1325] transition shadow-lg cursor-pointer group min-h-[420px] sm:min-h-[500px] lg:min-h-[600px] w-full"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-white shadow-md text-[#C99B2E] border border-amber-200 flex items-center justify-center group-hover:scale-105 transition-transform mx-auto">
-                      <Camera className="w-8 h-8" />
+                    <div className="w-20 h-20 rounded-3xl bg-white shadow-xl text-[#C99B2E] border-2 border-amber-200 flex items-center justify-center group-hover:scale-110 transition-transform mx-auto">
+                      <Camera className="w-10 h-10" />
                     </div>
-                    <div className="space-y-1 max-w-xs mx-auto text-center">
-                      <h3 className="text-sm font-black text-[#4A0E17]">
-                        Ajouter la photo de l'église
+                    <div className="space-y-2 max-w-sm mx-auto text-center">
+                      <span className="text-[10px] uppercase font-black tracking-wider bg-[#C99B2E] text-[#4A0E17] px-2.5 py-1 rounded-md inline-block">
+                        Grand Format Haute Résolution
+                      </span>
+                      <h3 className="text-base sm:text-lg font-black text-[#4A0E17]">
+                        Ajouter la photo de présentation de l'église
                       </h3>
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        Prenez une photo de votre temple ou choisissez-la dans la galerie de votre téléphone.
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Prenez une photo de la façade ou du sanctuaire depuis votre smartphone ou choisissez-la dans votre galerie. Elle sera affichée en grand format haute définition sur la page d'accueil.
                       </p>
                     </div>
-                    <div className="inline-flex items-center space-x-2 px-4 py-2 bg-[#4A0E17] hover:bg-[#6E1325] text-white text-xs font-bold rounded-xl shadow-xs transition mx-auto">
+                    <div className="inline-flex items-center space-x-2 px-5 py-2.5 bg-[#4A0E17] hover:bg-[#6E1325] text-white text-xs font-bold rounded-2xl shadow-md transition mx-auto group-hover:scale-105">
                       <Smartphone className="w-4 h-4 text-[#C99B2E]" />
-                      <span>Prendre / Charger la photo</span>
+                      <span>Prendre / Charger la photo en Grand Format</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-gradient-to-br from-[#4A0E17] via-[#6E1325] to-[#4A0E17] p-8 sm:p-10 text-white flex flex-col justify-between min-h-[320px] w-full max-w-md lg:max-w-lg mx-auto text-center items-center">
+                  <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-gradient-to-br from-[#4A0E17] via-[#6E1325] to-[#4A0E17] p-8 sm:p-12 text-white flex flex-col justify-between min-h-[420px] sm:min-h-[500px] lg:min-h-[600px] w-full text-center items-center">
                     <div className="flex items-center justify-between w-full">
-                      <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-[#C99B2E]">
-                        <Church className="w-6 h-6" />
+                      <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-[#C99B2E] shadow-sm">
+                        <Church className="w-7 h-7" />
                       </div>
-                      <span className="px-3 py-1 rounded-full bg-[#C99B2E]/20 text-[#C99B2E] border border-[#C99B2E]/30 text-[10px] font-black uppercase tracking-wider">
+                      <span className="px-3.5 py-1.5 rounded-full bg-[#C99B2E]/20 text-[#C99B2E] border border-[#C99B2E]/30 text-xs font-black uppercase tracking-wider">
                         Temple d’Akon
                       </span>
                     </div>
-                    <div className="space-y-2 my-auto py-6 mx-auto text-center max-w-sm">
-                      <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    <div className="space-y-3 my-auto py-8 mx-auto text-center max-w-md">
+                      <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
                         Église Missionnaire de la Foi
                       </h3>
-                      <p className="text-xs text-slate-300 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                         Paroisse Grand Temple d’Akon, Sangmelima. Une maison de prière, de foi, d'adoration et de transformation.
                       </p>
                     </div>
-                    <div className="text-[11px] text-amber-300 font-semibold flex items-center justify-center space-x-1.5 w-full pt-4 border-t border-white/10">
+                    <div className="text-xs text-amber-300 font-semibold flex items-center justify-center space-x-2 w-full pt-4 border-t border-white/10">
                       <span>Sud-Cameroun • Sangmelima</span>
                     </div>
                   </div>
@@ -1925,6 +1958,61 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
           );
         }}
       />
+
+      {/* Lightbox Plein Écran Grand Format pour la Photo de Présentation */}
+      {isPresentationLightboxOpen && presentationSec?.imageUrl && (
+        <div
+          onClick={() => setIsPresentationLightboxOpen(false)}
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in cursor-zoom-out"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-6xl w-full max-h-[94vh] flex flex-col items-center cursor-default"
+          >
+            {/* Header Controls */}
+            <div className="w-full flex items-center justify-between py-3 px-4 bg-slate-950/80 rounded-t-2xl border border-white/10 text-white">
+              <div className="flex items-center space-x-2">
+                <Church className="w-4 h-4 text-[#C99B2E]" />
+                <span className="text-xs font-black text-amber-200">
+                  Grand Temple d’Akon • Église Missionnaire de la Foi (Sangmelima)
+                </span>
+                <span className="text-[10px] bg-[#C99B2E] text-[#4A0E17] font-black px-2 py-0.5 rounded">
+                  Plein Format HD
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <a
+                  href={presentationSec.imageUrl}
+                  download="emf-sangmelima-temple.jpg"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 border border-white/10"
+                  title="Télécharger la photo en taille réelle"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#C99B2E]" />
+                  <span className="hidden sm:inline">Télécharger</span>
+                </a>
+                <button
+                  onClick={() => setIsPresentationLightboxOpen(false)}
+                  className="p-1.5 hover:bg-white/10 rounded-xl text-white transition cursor-pointer"
+                  title="Fermer (Échap)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Large Image Frame */}
+            <div className="w-full bg-black rounded-b-2xl overflow-hidden border-x border-b border-white/10 flex items-center justify-center max-h-[82vh]">
+              <img
+                src={presentationSec.imageUrl}
+                alt="Communauté EMF Sangmelima - Plein Écran"
+                className="max-w-full max-h-[82vh] object-contain shadow-2xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin Footer & Church Synchronizer Modal */}
       <FooterChurchEditorModal
