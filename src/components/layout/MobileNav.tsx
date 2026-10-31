@@ -54,6 +54,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
     { id: 'parakletos', label: 'Institut Parakletos', icon: GraduationCap },
     { id: 'media', label: 'Galerie Photos & Vidéos', icon: Film },
     { id: 'public-home', label: 'Site Public', icon: Globe },
+    { id: 'events-and-news', label: 'Événements & Actualités', icon: Calendar },
     { id: 'web-publish', label: 'Publication Web Gratuite', icon: Share2, pastorOrAdminOnly: true },
     { id: 'ministries', label: 'Ministères & Départements', icon: Layers },
     { id: 'home-cells', label: 'Cellules de Maison', icon: Compass },

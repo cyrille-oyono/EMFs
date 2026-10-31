@@ -53,6 +53,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
           visible: isRole(['ADMIN', 'PASTEUR']),
         },
         { id: 'public-home', label: 'Portail Public (Accueil)', icon: Globe, visible: true },
+        {
+          id: 'events-and-news',
+          label: 'Événements & Actualités',
+          icon: Calendar,
+          visible: true,
+          badge: 'Nouveau',
+        },
       ],
     },
     {

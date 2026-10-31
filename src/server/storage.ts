@@ -146,18 +146,43 @@ export interface DatabaseState {
 }
 
 function loadInitialDatabase(): DatabaseState {
-  // Purge de tout ancien localStorage résiduel pour respecter la consigne zéro stockage local
-  if (typeof window !== 'undefined' && window.localStorage) {
+  // 1. Charger depuis le cache local immédiat s'il existe (garantit zéro perte au rechargement)
+  if (typeof window !== 'undefined') {
     try {
-      window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem('EMF_SMART_DB_V2');
-      window.localStorage.removeItem('EMF_SMART_DB');
-    } catch {}
+      const saved = window.localStorage?.getItem(STORAGE_KEY) || window.sessionStorage?.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && parsed.settings) {
+          return {
+            ...parsed,
+            isInitialized: true,
+            // Conserver fidèlement les choix et suppressions de l'administrateur
+            carouselSlides: Array.isArray(parsed.carouselSlides) ? parsed.carouselSlides : [...INITIAL_CAROUSEL_SLIDES],
+            weeklyPrograms: Array.isArray(parsed.weeklyPrograms) ? parsed.weeklyPrograms : [...INITIAL_WEEKLY_PROGRAMS],
+            media: Array.isArray(parsed.media) ? parsed.media : [...INITIAL_MEDIA],
+            events: Array.isArray(parsed.events) ? parsed.events : [...INITIAL_EVENTS],
+            testimonials: Array.isArray(parsed.testimonials) ? parsed.testimonials : [...INITIAL_TESTIMONIALS],
+            users: Array.isArray(parsed.users) && parsed.users.length > 0 ? parsed.users : [...INITIAL_USERS],
+            latestServiceMedia: parsed.latestServiceMedia || JSON.parse(JSON.stringify(INITIAL_LATEST_SERVICE_MEDIA)),
+            settings: {
+              ...INITIAL_SETTINGS,
+              ...(parsed.settings || {}),
+              socials: { ...INITIAL_SETTINGS.socials, ...(parsed.settings?.socials || {}) },
+              theme: { ...INITIAL_SETTINGS.theme, ...(parsed.settings?.theme || {}) },
+              modules: { ...INITIAL_SETTINGS.modules, ...(parsed.settings?.modules || {}) },
+              treasury: { ...INITIAL_SETTINGS.treasury, ...(parsed.settings?.treasury || {}) },
+            },
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Erreur lecture base locale:', e);
+    }
   }
 
-  // Initialisation de base en mémoire (source maîtresse: Supabase app_content)
+  // 2. Initialisation initiale par défaut
   return {
-    isInitialized: false,
+    isInitialized: true,
     settings: JSON.parse(JSON.stringify(INITIAL_SETTINGS)),
     users: JSON.parse(JSON.stringify(INITIAL_USERS)),
     members: JSON.parse(JSON.stringify(INITIAL_MEMBERS)),
@@ -207,16 +232,18 @@ let supabaseSyncTimer: any = null;
 function persistDatabase(immediate = false) {
   db.isInitialized = true;
 
-  // Garantir l'absence totale de persistance localStorage
-  if (typeof window !== 'undefined' && window.localStorage) {
+  // 1. Sauvegarde miroir locale instantanée (garantit que rien ne disparaît au rechargement)
+  if (typeof window !== 'undefined') {
     try {
-      window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem('EMF_SMART_DB_V2');
-      window.localStorage.removeItem('EMF_SMART_DB');
-    } catch {}
+      const dataStr = JSON.stringify(db);
+      window.localStorage?.setItem(STORAGE_KEY, dataStr);
+      window.sessionStorage?.setItem(STORAGE_KEY, dataStr);
+    } catch (e) {
+      console.warn('Erreur persistance locale:', e);
+    }
   }
 
-  // Persistance asynchrone sur le serveur backend
+  // 2. Persistance asynchrone sur le disque serveur via /api/storage
   if (typeof window !== 'undefined' && typeof fetch === 'function') {
     try {
       fetch('/api/storage', {
@@ -227,7 +254,7 @@ function persistDatabase(immediate = false) {
     } catch {}
   }
 
-  // Persistance maîtresse dans Supabase (table app_content) avec diffusion instantanée
+  // 3. Persistance maîtresse dans Supabase (table app_content) avec diffusion instantanée
   const syncToSupabase = async () => {
     if (!isSupabaseConfigured()) return;
     try {
@@ -3289,20 +3316,40 @@ export const Storage = {
 
   _isSupabaseSubscribed: false,
 
-  // Synchronisation avec la sauvegarde Supabase (source de vérité unique)
+  // Synchronisation avec la sauvegarde serveur & Supabase (source de vérité unique)
   async initPersistence(): Promise<void> {
     if (typeof window === 'undefined') return;
 
-    // Purge de tout résidu de stockage local
+    // 1. Charger depuis le disque serveur (/api/storage) en priorité
     try {
-      if (window.localStorage) {
-        window.localStorage.removeItem(STORAGE_KEY);
-        window.localStorage.removeItem('EMF_SMART_DB_V2');
-        window.localStorage.removeItem('EMF_SMART_DB');
+      const res = await fetch('/api/storage');
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.success && json?.data && json.data.settings) {
+          db = {
+            ...db,
+            ...json.data,
+            isInitialized: true,
+            carouselSlides: Array.isArray(json.data.carouselSlides) ? json.data.carouselSlides : db.carouselSlides,
+            weeklyPrograms: Array.isArray(json.data.weeklyPrograms) ? json.data.weeklyPrograms : db.weeklyPrograms,
+            media: Array.isArray(json.data.media) ? json.data.media : db.media,
+            events: Array.isArray(json.data.events) ? json.data.events : db.events,
+            testimonials: Array.isArray(json.data.testimonials) ? json.data.testimonials : db.testimonials,
+            users: Array.isArray(json.data.users) && json.data.users.length > 0 ? json.data.users : db.users,
+            latestServiceMedia: json.data.latestServiceMedia || db.latestServiceMedia,
+          };
+          try {
+            const dataStr = JSON.stringify(db);
+            window.localStorage?.setItem(STORAGE_KEY, dataStr);
+            window.sessionStorage?.setItem(STORAGE_KEY, dataStr);
+          } catch {}
+        }
       }
-    } catch {}
+    } catch (e) {
+      console.warn('Notice chargement /api/storage:', e);
+    }
 
-    // 1. Charger depuis Supabase (table app_content)
+    // 2. Charger depuis Supabase (table app_content)
     if (isSupabaseConfigured()) {
       try {
         const [remoteDb, rawAllContent] = await Promise.all([
@@ -3372,11 +3419,16 @@ export const Storage = {
           db.cmsState = allContent['homepage_cms'].cmsState;
         }
         db.isInitialized = true;
+        try {
+          const dataStr = JSON.stringify(db);
+          window.localStorage?.setItem(STORAGE_KEY, dataStr);
+          window.sessionStorage?.setItem(STORAGE_KEY, dataStr);
+        } catch {}
       } catch (err) {
         console.warn('Erreur chargement Supabase dans initPersistence:', err);
       }
 
-      // 2. Souscription Supabase Realtime pour synchronisation immédiate multi-utilisateurs
+      // 3. Souscription Supabase Realtime pour synchronisation immédiate multi-utilisateurs
       if (!Storage._isSupabaseSubscribed) {
         Storage._isSupabaseSubscribed = true;
         subscribeToAppContent(({ sectionKey, contentData }) => {
@@ -3409,21 +3461,6 @@ export const Storage = {
         });
       }
     }
-
-    // 3. Fallback serveur si nécessaire
-    try {
-      const res = await fetch('/api/storage');
-      if (res.ok) {
-        const json = await res.json();
-        if (json?.success && json?.data && json.data.settings && !db.isInitialized) {
-          db = {
-            ...db,
-            ...json.data,
-            isInitialized: true,
-          };
-        }
-      }
-    } catch {}
   },
 };
 

@@ -49,10 +49,12 @@ interface ContentContextType {
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
 export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialisation instantanée avec des données par défaut complètes synchronisées pour bannir la page blanche
+  const isStorageInit = typeof window !== 'undefined' ? Boolean(Storage.getSnapshot()?.isInitialized) : false;
+
   const [sections, setSections] = useState<HomepageSection[]>(() => {
     try {
       const s = Storage.getPublicHomepageSections();
+      if (isStorageInit && Array.isArray(s)) return s;
       return Array.isArray(s) && s.length > 0 ? s : INITIAL_HOMEPAGE_SECTIONS;
     } catch {
       return INITIAL_HOMEPAGE_SECTIONS;
@@ -62,6 +64,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [carouselSlides, setCarouselSlides] = useState<HomepageCarouselSlide[]>(() => {
     try {
       const s = Storage.getCarouselSlides();
+      if (isStorageInit && Array.isArray(s)) return s;
       return Array.isArray(s) && s.length > 0 ? s : INITIAL_CAROUSEL_SLIDES;
     } catch {
       return INITIAL_CAROUSEL_SLIDES;
@@ -71,6 +74,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [weeklyPrograms, setWeeklyPrograms] = useState<WeeklyProgram[]>(() => {
     try {
       const p = Storage.getWeeklyPrograms();
+      if (isStorageInit && Array.isArray(p)) return p;
       return Array.isArray(p) && p.length > 0 ? p : INITIAL_WEEKLY_PROGRAMS;
     } catch {
       return INITIAL_WEEKLY_PROGRAMS;
@@ -93,6 +97,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [events, setEvents] = useState<Event[]>(() => {
     try {
       const e = Storage.getEvents();
+      if (isStorageInit && Array.isArray(e)) return e;
       return Array.isArray(e) && e.length > 0 ? e : INITIAL_EVENTS;
     } catch {
       return INITIAL_EVENTS;
@@ -102,6 +107,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [testimonials, setTestimonials] = useState<Testimonial[]>(() => {
     try {
       const t = Storage.getTestimonials(true);
+      if (isStorageInit && Array.isArray(t)) return t;
       return Array.isArray(t) && t.length > 0 ? t : INITIAL_TESTIMONIALS;
     } catch {
       return INITIAL_TESTIMONIALS;

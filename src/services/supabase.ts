@@ -474,25 +474,25 @@ export async function getAppContent<T = any>(sectionKey: string): Promise<T | nu
             return mergeWithDefaultLatestMedia(data.content_data) as unknown as T;
           }
           if (sectionKey === 'carousel_slides') {
-            if (Array.isArray(data.content_data) && data.content_data.length > 0) {
+            if (Array.isArray(data.content_data)) {
               return data.content_data as T;
             }
             return INITIAL_CAROUSEL_SLIDES as unknown as T;
           }
           if (sectionKey === 'weekly_programs') {
-            if (Array.isArray(data.content_data) && data.content_data.length > 0) {
+            if (Array.isArray(data.content_data)) {
               return data.content_data as T;
             }
             return INITIAL_WEEKLY_PROGRAMS as unknown as T;
           }
           if (sectionKey === 'homepage_sections') {
-            if (Array.isArray(data.content_data) && data.content_data.length > 0) {
+            if (Array.isArray(data.content_data)) {
               return data.content_data as T;
             }
             return INITIAL_HOMEPAGE_SECTIONS as unknown as T;
           }
           if (sectionKey === 'dynamic_posts') {
-            if (Array.isArray(data.content_data) && data.content_data.length > 0) {
+            if (Array.isArray(data.content_data)) {
               return data.content_data.map(sanitizeDynamicPost) as unknown as T;
             }
             return FALLBACK_DYNAMIC_POSTS as unknown as T;
@@ -623,19 +623,22 @@ export async function getDynamicPosts(options?: {
         }
 
         const { data, error } = await query;
-        if (error || !data || data.length === 0) {
-          return FALLBACK_DYNAMIC_POSTS;
+        if (error) {
+          console.warn('Supabase: Information dynamic_posts:', error?.message);
+          return [];
         }
 
-        const sanitized = data.map(sanitizeDynamicPost);
-        return sanitized.length > 0 ? sanitized : FALLBACK_DYNAMIC_POSTS;
+        if (Array.isArray(data)) {
+          return data.map(sanitizeDynamicPost);
+        }
+        return [];
       } catch (err: any) {
         console.warn('Supabase: Exception lecture dynamic_posts:', err?.message || err);
-        return FALLBACK_DYNAMIC_POSTS;
+        return [];
       }
     })(),
     2500,
-    FALLBACK_DYNAMIC_POSTS
+    []
   );
 }
 

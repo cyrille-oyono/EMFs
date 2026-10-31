@@ -154,9 +154,11 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
       return INITIAL_LATEST_SERVICE_MEDIA;
     }
   });
+  const isStorageInit = typeof window !== 'undefined' ? Boolean(Storage.getSnapshot()?.isInitialized) : false;
   const [carouselSlides, setCarouselSlides] = useState<HomepageCarouselSlide[]>(() => {
     try {
       const s = Storage.getCarouselSlides();
+      if (isStorageInit && Array.isArray(s)) return s;
       return Array.isArray(s) && s.length > 0 ? s : INITIAL_CAROUSEL_SLIDES;
     } catch {
       return INITIAL_CAROUSEL_SLIDES;
@@ -165,6 +167,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   const [weeklyPrograms, setWeeklyPrograms] = useState<WeeklyProgram[]>(() => {
     try {
       const p = Storage.getWeeklyPrograms();
+      if (isStorageInit && Array.isArray(p)) return p;
       return Array.isArray(p) && p.length > 0 ? p : INITIAL_WEEKLY_PROGRAMS;
     } catch {
       return INITIAL_WEEKLY_PROGRAMS;
@@ -603,9 +606,16 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
               <MessageSquare className="w-3.5 h-3.5 text-[#C99B2E]" />
               <span>Forum Chrétien</span>
             </button>
-            <a href="#publications" className="hover:text-[#6E1325] text-[#4A0E17] transition uppercase font-bold tracking-wider cursor-pointer">
-              Publications
-            </a>
+            <button
+              onClick={() => {
+                if (onNavigateToPage) onNavigateToPage('events-and-news');
+                else if (typeof window !== 'undefined') window.location.hash = '#events-and-news';
+              }}
+              className="hover:text-[#6E1325] text-[#4A0E17] transition uppercase font-bold tracking-wider cursor-pointer flex items-center space-x-1 bg-amber-50/80 px-2.5 py-1 rounded-lg border border-amber-200"
+            >
+              <Calendar className="w-3.5 h-3.5 text-[#C99B2E]" />
+              <span>Événements & Actualités</span>
+            </button>
             <a href="#socials" className="hover:text-[#6E1325] transition">Réseaux</a>
           </nav>
 
@@ -1115,393 +1125,41 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
         <RandomVerseSection />
       )}
 
-      {/* Upcoming Events & Interactive Calendar Section */}
-      {eventsSec && (
-        <section id="events" className="py-16 bg-[#F4F7FB] border-y border-slate-200 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto space-y-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div>
-                <div className="text-xs font-black uppercase tracking-wider text-[#C99B2E] flex items-center space-x-1.5 mb-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>Agenda Spirituel • Sangmelima</span>
-                </div>
-                <h2 className="text-2xl sm:text-4xl font-black text-[#4A0E17]">
-                  {eventsSec.title || 'Agenda & Calendrier Spirituel'}
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl leading-relaxed">
-                  {eventsSec.subtitle ||
-                    'Visualisez tous les cultes, réunions de prière et conférences de la semaine et du mois en un coup d’œil.'}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                {/* Switcher: Calendrier interactif vs Cartes à la une */}
-                <div className="inline-flex bg-white p-1 rounded-2xl border border-slate-200 shadow-2xs">
-                  <button
-                    type="button"
-                    onClick={() => setEventsDisplayMode('calendar')}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                      eventsDisplayMode === 'calendar'
-                        ? 'bg-[#4A0E17] text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>Calendrier Interactif</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setEventsDisplayMode('cards')}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                      eventsDisplayMode === 'cards'
-                        ? 'bg-[#4A0E17] text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <span>Cartes à la Une</span>
-                    {events.length > 0 && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 text-[#4A0E17] font-black">
-                        {events.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => {
-                    if (currentUser) {
-                      onGoToDashboard();
-                    } else if (onOpenAuth) {
-                      onOpenAuth('login');
-                    } else {
-                      onGoToDashboard();
-                    }
-                  }}
-                  className="text-xs font-bold text-[#6E1325] hover:underline flex items-center space-x-1 py-1.5 px-2 cursor-pointer"
-                >
-                  <span>{currentUser ? 'Espace Membre' : 'Connexion Membre'}</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+      {/* Redirection vers la page unique des Événements, Enseignements & Actualités */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="bg-gradient-to-r from-[#4A0E17] via-[#6E1325] to-[#4A0E17] rounded-3xl p-8 sm:p-12 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 border border-[#C99B2E]/30">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-black tracking-wider uppercase border border-white/20">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Agenda Paroissial & Enseignements</span>
             </div>
-
-            {/* Display Mode: Interactive Calendar */}
-            {eventsDisplayMode === 'calendar' ? (
-              <InteractiveHomeCalendar
-                events={events}
-                weeklyPrograms={weeklyPrograms}
-                currentUser={currentUser}
-                onRefresh={loadData}
-                onOpenWeeklyPrograms={() => {
-                  setProgramsModalCreateMode(false);
-                  setIsManageProgramsOpen(true);
-                }}
-              />
-            ) : (
-              /* Display Mode: 3 Spotlight Cards */
-              <div className="space-y-6">
-                {(events || []).length === 0 ? (
-                  <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 text-xs text-slate-500">
-                    Aucun événement spécial pour l’instant. Basculez sur le « Calendrier Interactif » pour voir tous les cultes hebdomadaires.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {(events || []).slice(0, 3).map((evt) => (
-                      <div
-                        key={evt?.id || Math.random()}
-                        className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-xs hover:shadow-md transition flex flex-col group"
-                      >
-                        <div className="h-48 bg-slate-200 relative overflow-hidden">
-                          <img
-                            src={
-                              evt?.bannerUrl ||
-                              'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=800&q=80'
-                            }
-                            alt={evt?.title || 'Événement'}
-                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                          />
-                          <span className="absolute top-3 left-3 bg-[#4A0E17]/90 backdrop-blur-xs text-[#C99B2E] text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-[#C99B2E]/30">
-                            {evt?.type || 'CULTE'}
-                          </span>
-                        </div>
-
-                        <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                          <div>
-                            <div className="text-xs text-[#C99B2E] font-black mb-1.5 flex items-center space-x-1.5">
-                              <Calendar className="w-3.5 h-3.5" />
-                              <span>{formatDateDouala(evt?.startDate || new Date().toISOString())}</span>
-                            </div>
-                            <h3 className="text-base font-black text-[#4A0E17] line-clamp-2 leading-snug group-hover:text-[#6E1325]">
-                              {evt?.title || 'Événement'}
-                            </h3>
-                            <p className="text-xs text-slate-600 mt-2 line-clamp-3 leading-relaxed">
-                              {evt?.description || ''}
-                            </p>
-                          </div>
-
-                          <div className="pt-3 border-t border-slate-100 text-xs text-slate-500 flex items-center justify-between">
-                            <span className="flex items-center space-x-1.5 truncate">
-                              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                              <span className="truncate">{evt?.location || 'Grand Temple Akon, Sangmelima'}</span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Dynamic Posts Section (Table Supabase dynamic_posts & Realtime) */}
-      <section id="publications" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 pb-4 border-b border-slate-200">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider text-[#C99B2E] bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                Publications & Vie de l'Église
-              </span>
-              <span className="inline-flex items-center space-x-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <span>Supabase Realtime Actif</span>
-              </span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-black text-[#4A0E17] tracking-tight">
-              Enseignements, Annonces & Actualités
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
+              Prochains Grands Événements & Actualités
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Toutes les publications officielles de l'église, messages bibliques et annonces communautaires sont synchronisées en direct.
+            <p className="text-xs sm:text-sm text-rose-100/90 leading-relaxed">
+              Consultez notre page unique dédiée pour retrouver l'ensemble des cultes, conférences, programmes spirituels, prédications bibliques et annonces officielles de l'église.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'PASTEUR') && (
-              <button
-                onClick={() => setIsAddPostModalOpen(true)}
-                className="px-4 py-2.5 bg-[#4A0E17] hover:bg-[#6E1325] text-white text-xs font-black rounded-xl shadow-md transition flex items-center space-x-2 cursor-pointer"
-              >
-                <Plus className="w-4 h-4 text-[#C99B2E]" />
-                <span>+ Publier un Contenu (Realtime)</span>
-              </button>
-            )}
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <button
-              onClick={() => loadData()}
-              disabled={loading}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition cursor-pointer"
-              title="Rafraîchir les publications"
+              onClick={() => {
+                if (onNavigateToPage) {
+                  onNavigateToPage('events-and-news');
+                } else if (typeof window !== 'undefined') {
+                  window.location.hash = '#events-and-news';
+                }
+              }}
+              className="px-6 py-3.5 bg-gradient-to-r from-amber-400 via-[#C99B2E] to-amber-500 hover:from-amber-300 hover:to-[#C99B2E] text-[#4A0E17] text-xs sm:text-sm font-black rounded-2xl shadow-lg transition flex items-center justify-center space-x-2 cursor-pointer group"
             >
-              <RefreshCw className={`w-4 h-4 text-[#4A0E17] ${loading ? 'animate-spin' : ''}`} />
+              <span>Accéder aux Événements & Actualités</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
         </div>
-
-        {/* Category Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2 mb-8">
-          {[
-            { id: 'TOUS', label: 'Toutes les publications', count: (dynamicPosts || []).length },
-            {
-              id: 'ENSEIGNEMENT',
-              label: 'Enseignements & Prédications',
-              count: (dynamicPosts || []).filter((p) => p && p.category === 'ENSEIGNEMENT').length,
-            },
-            {
-              id: 'ANNONCE',
-              label: 'Annonces Officielles',
-              count: (dynamicPosts || []).filter((p) => p && p.category === 'ANNONCE').length,
-            },
-            {
-              id: 'ACTUALITE',
-              label: 'Actualités Paroissiales',
-              count: (dynamicPosts || []).filter((p) => p && p.category === 'ACTUALITE').length,
-            },
-            {
-              id: 'CULTE',
-              label: 'Cultes & Événements',
-              count: (dynamicPosts || []).filter((p) => p && p.category === 'CULTE').length,
-            },
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedPostCategory(cat.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                selectedPostCategory === cat.id
-                  ? 'bg-[#4A0E17] text-white shadow-xs'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              <span>{cat.label}</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  selectedPostCategory === cat.id
-                    ? 'bg-white/20 text-white'
-                    : 'bg-slate-100 text-slate-500'
-                }`}
-              >
-                {cat.count}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Posts Cards Grid */}
-        {(() => {
-          const displayed = (dynamicPosts || []).filter(
-            (p) => p && (selectedPostCategory === 'TOUS' || p.category === selectedPostCategory)
-          );
-
-          if (displayed.length === 0) {
-            return (
-              <div className="bg-white rounded-3xl p-10 text-center border border-slate-200 shadow-xs max-w-lg mx-auto space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-[#C99B2E] border border-amber-200 flex items-center justify-center mx-auto">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <h3 className="text-sm font-bold text-[#4A0E17]">Aucune publication dans cette rubrique</h3>
-                <p className="text-xs text-slate-500">
-                  Les nouveaux enseignements et communiqués publiés par la direction de l'église s'afficheront ici en direct.
-                </p>
-                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'PASTEUR') && (
-                  <button
-                    onClick={() => setIsAddPostModalOpen(true)}
-                    className="px-4 py-2 bg-[#4A0E17] hover:bg-[#6E1325] text-white text-xs font-bold rounded-xl shadow transition cursor-pointer"
-                  >
-                    + Créer une publication
-                  </button>
-                )}
-              </div>
-            );
-          }
-
-          return (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(displayed || []).map((post) => {
-                const isTeaching = post?.category === 'ENSEIGNEMENT';
-                const isNotice = post?.category === 'ANNONCE';
-                const isNews = post?.category === 'ACTUALITE';
-
-                const categoryBadgeClass = isTeaching
-                  ? 'bg-purple-50 text-purple-800 border-purple-200'
-                  : isNotice
-                  ? 'bg-amber-50 text-amber-900 border-amber-200'
-                  : isNews
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : 'bg-sky-50 text-sky-800 border-sky-200';
-
-                return (
-                  <div
-                    key={post?.id || Math.random()}
-                    className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
-                  >
-                    <div>
-                      {/* Post Media or Header Gradient */}
-                      {post?.media_url ? (
-                        <div className="h-48 overflow-hidden relative bg-slate-100">
-                          <img
-                            src={post.media_url}
-                            alt={post?.title || 'Publication'}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                          <div className="absolute top-3 left-3">
-                            <span
-                              className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border shadow-xs backdrop-blur-md bg-white/95 ${categoryBadgeClass}`}
-                            >
-                              {post?.category || 'ACTUALITE'}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="h-28 bg-gradient-to-br from-[#4A0E17] via-[#6E1325] to-[#4A0E17] p-4 flex items-between justify-between text-white relative">
-                          <span
-                            className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full border bg-white/10 text-amber-300 border-white/20"
-                          >
-                            {post?.category || 'ACTUALITE'}
-                          </span>
-                          <Church className="w-5 h-5 text-amber-300/80" />
-                        </div>
-                      )}
-
-                      {/* Content */}
-                      <div className="p-5 space-y-2.5">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span className="font-semibold text-slate-600 flex items-center space-x-1">
-                            <UserIcon className="w-3 h-3 text-[#C99B2E]" />
-                            <span>{post.author || 'Bureau Pastoral'}</span>
-                          </span>
-                          <span className="flex items-center space-x-1">
-                            <Clock className="w-3 h-3" />
-                            <span>
-                              {post.created_at
-                                ? new Date(post.created_at).toLocaleDateString('fr-FR', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })
-                                : ''}
-                            </span>
-                          </span>
-                        </div>
-
-                        <h3 className="text-base font-black text-[#4A0E17] group-hover:text-[#6E1325] transition line-clamp-2">
-                          {post.title}
-                        </h3>
-
-                        {post.body && (
-                          <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
-                            {post.body}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions Card Footer */}
-                    <div className="p-5 pt-0 border-t border-slate-100 flex items-center justify-between gap-2 mt-2">
-                      <button
-                        onClick={() => setSelectedPostModal(post)}
-                        className="text-xs font-bold text-[#6E1325] hover:text-[#4A0E17] hover:underline flex items-center space-x-1 cursor-pointer"
-                      >
-                        <span>Lire la suite</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-[#C99B2E]" />
-                      </button>
-
-                      <div className="flex items-center space-x-1">
-                        <button
-                          onClick={() => {
-                            const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-                            const text = `*${post.title}*\n${post.body ? post.body.substring(0, 140) + '...' : ''}\nRetrouvez cette publication en direct sur le site de l'Église Missionnaire de la Foi :\n${shareUrl}`;
-                            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
-                          }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition"
-                          title="Partager sur WhatsApp"
-                        >
-                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (typeof window !== 'undefined') {
-                              navigator.clipboard.writeText(`${window.location.origin}/#publications`);
-                              showToast('✓ Lien de la publication copié !');
-                            }
-                          }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-[#4A0E17] hover:bg-slate-100 transition cursor-pointer"
-                          title="Copier le lien"
-                        >
-                          <Share2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
       </section>
+
+
 
       {/* Validated Testimonials Section */}
       {testimonialsSec && (testimonials || []).length > 0 && (

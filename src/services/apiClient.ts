@@ -1310,7 +1310,7 @@ export const apiClient = {
     if (isSupabaseConfigured()) {
       try {
         const remote = await getCMSStateFromSupabase();
-        if (remote?.weeklyPrograms && remote.weeklyPrograms.length > 0) {
+        if (remote && Array.isArray(remote.weeklyPrograms)) {
           Storage.setWeeklyPrograms(remote.weeklyPrograms);
           return Storage.getWeeklyPrograms();
         }

@@ -16,6 +16,7 @@ import { apiClient } from './services/apiClient';
 // Pages
 import { DashboardPage } from './pages/DashboardPage';
 import { PublicHomePage } from './pages/PublicHomePage';
+import { EventsAndNewsPage } from './pages/EventsAndNewsPage';
 import { MembersPage } from './pages/MembersPage';
 import { FamiliesPage } from './pages/FamiliesPage';
 import { AttendancePage } from './pages/AttendancePage';
@@ -173,6 +174,24 @@ const MainApp: React.FC = () => {
             onNavigateToPage={(page) => setCurrentPage(page)}
           />
         )}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          initialTab={authModalTab}
+          titleNotice={authNotice}
+        />
+      </div>
+    );
+  }
+
+  // Affichage en mode public de la page dédiée Événements, Enseignements & Actualités
+  if (currentPage === 'events-and-news') {
+    return (
+      <div className="min-h-screen bg-[#FCFCFD] dark:bg-[#0B0204] text-slate-800 dark:text-slate-100 transition-colors duration-200">
+        <EventsAndNewsPage
+          onNavigate={(page) => setCurrentPage(page)}
+          onOpenAuth={handleOpenAuth}
+        />
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}

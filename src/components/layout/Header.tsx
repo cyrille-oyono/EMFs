@@ -14,6 +14,7 @@ import {
   Save,
   CheckCircle,
   RefreshCw,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChurchLogo } from '../common/ChurchLogo';
@@ -100,6 +101,17 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <ExternalLink className="w-3.5 h-3.5" />
             <span>Site Public</span>
+          </button>
+          <button
+            onClick={() => onNavigate('events-and-news')}
+            className={`px-3 py-1 text-xs font-medium rounded transition flex items-center space-x-1.5 cursor-pointer ${
+              currentPage === 'events-and-news'
+                ? 'bg-[#C99B2E] text-[#4A0E17] font-bold shadow-xs'
+                : 'text-amber-200 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Événements & Actualités</span>
           </button>
           {(currentUser?.role === 'ADMIN' || currentUser?.role === 'PASTEUR') && (
             <button
