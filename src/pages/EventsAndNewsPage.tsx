@@ -58,8 +58,7 @@ export const EventsAndNewsPage: React.FC<EventsAndNewsPageProps> = ({
   const [eventsDisplayMode, setEventsDisplayMode] = useState<'calendar' | 'cards'>('calendar');
   const [selectedEventType, setSelectedEventType] = useState<string>('TOUS');
 
-  // Dynamic Posts state (Enseignements, annonces & actualités)
-  const [dynamicPosts, setDynamicPosts] = useState<DynamicPost[]>(() => FALLBACK_DYNAMIC_POSTS);
+  const [dynamicPosts, setDynamicPosts] = useState<DynamicPost[]>([]);
   const [selectedPostCategory, setSelectedPostCategory] = useState<string>('TOUS');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedPostModal, setSelectedPostModal] = useState<DynamicPost | null>(null);

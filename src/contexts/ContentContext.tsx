@@ -54,63 +54,81 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [sections, setSections] = useState<HomepageSection[]>(() => {
     try {
       const s = Storage.getPublicHomepageSections();
-      if (isStorageInit && Array.isArray(s)) return s;
-      return Array.isArray(s) && s.length > 0 ? s : INITIAL_HOMEPAGE_SECTIONS;
+      if (Array.isArray(s)) return s;
+      return [];
     } catch {
-      return INITIAL_HOMEPAGE_SECTIONS;
+      return [];
     }
   });
 
   const [carouselSlides, setCarouselSlides] = useState<HomepageCarouselSlide[]>(() => {
     try {
       const s = Storage.getCarouselSlides();
-      if (isStorageInit && Array.isArray(s)) return s;
-      return Array.isArray(s) && s.length > 0 ? s : INITIAL_CAROUSEL_SLIDES;
+      if (Array.isArray(s)) return s;
+      return [];
     } catch {
-      return INITIAL_CAROUSEL_SLIDES;
+      return [];
     }
   });
 
   const [weeklyPrograms, setWeeklyPrograms] = useState<WeeklyProgram[]>(() => {
     try {
       const p = Storage.getWeeklyPrograms();
-      if (isStorageInit && Array.isArray(p)) return p;
-      return Array.isArray(p) && p.length > 0 ? p : INITIAL_WEEKLY_PROGRAMS;
+      if (Array.isArray(p)) return p;
+      return [];
     } catch {
-      return INITIAL_WEEKLY_PROGRAMS;
+      return [];
     }
   });
 
   const [latestServiceMedia, setLatestServiceMedia] = useState<LatestServiceMedia>(() => {
     try {
       const m = Storage.getLatestServiceMedia();
-      return m && typeof m === 'object' && m.serviceTitle ? m : INITIAL_LATEST_SERVICE_MEDIA;
+      if (m && typeof m === 'object') return m;
+      return INITIAL_LATEST_SERVICE_MEDIA;
     } catch {
       return INITIAL_LATEST_SERVICE_MEDIA;
     }
   });
 
   const [dynamicPosts, setDynamicPosts] = useState<DynamicPost[]>(() => {
-    return FALLBACK_DYNAMIC_POSTS;
+    try {
+      const p = Storage.getAnnouncements();
+      if (Array.isArray(p) && p.length > 0) {
+        return p.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          body: a.content || a.summary || '',
+          category: a.category || 'ACTUALITE',
+          media_url: a.imageUrl || null,
+          author: a.authorName || 'Bureau Pastoral',
+          is_published: a.isPublicWeb !== false,
+          created_at: a.createdAt,
+        }));
+      }
+      return [];
+    } catch {
+      return [];
+    }
   });
 
   const [events, setEvents] = useState<Event[]>(() => {
     try {
       const e = Storage.getEvents();
-      if (isStorageInit && Array.isArray(e)) return e;
-      return Array.isArray(e) && e.length > 0 ? e : INITIAL_EVENTS;
+      if (Array.isArray(e)) return e;
+      return [];
     } catch {
-      return INITIAL_EVENTS;
+      return [];
     }
   });
 
   const [testimonials, setTestimonials] = useState<Testimonial[]>(() => {
     try {
       const t = Storage.getTestimonials(true);
-      if (isStorageInit && Array.isArray(t)) return t;
-      return Array.isArray(t) && t.length > 0 ? t : INITIAL_TESTIMONIALS;
+      if (Array.isArray(t)) return t;
+      return [];
     } catch {
-      return INITIAL_TESTIMONIALS;
+      return [];
     }
   });
 
@@ -125,9 +143,10 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [mediaItems, setMediaItems] = useState<MediaItem[]>(() => {
     try {
       const m = Storage.getMediaItems();
-      return Array.isArray(m) && m.length > 0 ? m : INITIAL_MEDIA;
+      if (Array.isArray(m)) return m;
+      return [];
     } catch {
-      return INITIAL_MEDIA;
+      return [];
     }
   });
 
@@ -148,18 +167,18 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
         apiClient.getCarouselSlides().catch(() => Storage.getCarouselSlides()),
         apiClient.getLatestServiceMedia().catch(() => Storage.getLatestServiceMedia()),
         apiClient.getWeeklyPrograms().catch(() => Storage.getWeeklyPrograms()),
-        apiClient.getDynamicPosts().catch(() => FALLBACK_DYNAMIC_POSTS),
+        apiClient.getDynamicPosts().catch(() => []),
       ]);
 
-      if (Array.isArray(secList) && secList.length > 0) setSections(secList);
-      if (Array.isArray(evts) && evts.length > 0) setEvents(evts);
-      if (Array.isArray(tst) && tst.length > 0) setTestimonials(tst);
-      if (vrs) setTodayVerse(vrs);
-      if (Array.isArray(med) && med.length > 0) setMediaItems(med);
-      if (Array.isArray(slides) && slides.length > 0) setCarouselSlides(slides);
-      if (lastMedia && lastMedia.serviceTitle) setLatestServiceMedia(lastMedia);
-      if (Array.isArray(progs) && progs.length > 0) setWeeklyPrograms(progs);
-      if (Array.isArray(posts) && posts.length > 0) setDynamicPosts(posts);
+      if (Array.isArray(secList)) setSections(secList);
+      if (Array.isArray(evts)) setEvents(evts);
+      if (Array.isArray(tst)) setTestimonials(tst);
+      if (vrs !== undefined) setTodayVerse(vrs);
+      if (Array.isArray(med)) setMediaItems(med);
+      if (Array.isArray(slides)) setCarouselSlides(slides);
+      if (lastMedia && typeof lastMedia === 'object') setLatestServiceMedia(lastMedia);
+      if (Array.isArray(progs)) setWeeklyPrograms(progs);
+      if (Array.isArray(posts)) setDynamicPosts(posts);
 
       setLastSyncedTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err) {
@@ -321,15 +340,15 @@ export const useContent = () => {
   if (!context) {
     // Si appelé hors du ContentProvider, fournir un objet par défaut pour éviter tout crash
     return {
-      sections: INITIAL_HOMEPAGE_SECTIONS,
-      carouselSlides: INITIAL_CAROUSEL_SLIDES,
-      weeklyPrograms: INITIAL_WEEKLY_PROGRAMS,
+      sections: [],
+      carouselSlides: [],
+      weeklyPrograms: [],
       latestServiceMedia: INITIAL_LATEST_SERVICE_MEDIA,
-      dynamicPosts: FALLBACK_DYNAMIC_POSTS,
-      events: INITIAL_EVENTS,
-      testimonials: INITIAL_TESTIMONIALS,
-      todayVerse: Storage.getTodayVerse(),
-      mediaItems: INITIAL_MEDIA,
+      dynamicPosts: [],
+      events: [],
+      testimonials: [],
+      todayVerse: undefined,
+      mediaItems: [],
       isContentLoading: false,
       lastSyncedTime: null,
       refreshContent: async () => {},

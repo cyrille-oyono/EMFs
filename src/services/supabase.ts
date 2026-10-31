@@ -171,17 +171,7 @@ export async function withTimeout<T>(
   ]);
 }
 
-export const FALLBACK_DYNAMIC_POSTS: DynamicPost[] = (INITIAL_ANNOUNCEMENTS || []).map((a, idx) => ({
-  id: a?.id || `post-${idx}`,
-  category: a?.category || 'ACTUALITE',
-  title: a?.title || 'Annonce Paroissiale',
-  body: a?.content || a?.summary || '',
-  media_url: a?.imageUrl || null,
-  author: a?.authorName || 'Bureau Pastoral',
-  is_published: true,
-  metadata: { priority: (a as any)?.priority || 'NORMAL' },
-  created_at: a?.createdAt || new Date().toISOString(),
-}));
+export const FALLBACK_DYNAMIC_POSTS: DynamicPost[] = [];
 
 /**
  * Fusionne des paramètres partiels avec les paramètres système par défaut complets
@@ -250,8 +240,8 @@ export function mergeWithDefaultCMS(remote?: Partial<SupabaseCMSPayload> | any |
 
   return {
     cmsState,
-    carouselSlides: Array.isArray(slides) ? slides.filter(Boolean) : INITIAL_CAROUSEL_SLIDES,
-    weeklyPrograms: Array.isArray(programs) ? programs.filter(Boolean) : INITIAL_WEEKLY_PROGRAMS,
+    carouselSlides: Array.isArray(slides) ? slides.filter(Boolean) : [],
+    weeklyPrograms: Array.isArray(programs) ? programs.filter(Boolean) : [],
     updatedAt: remote?.updatedAt || new Date().toISOString(),
     updatedBy: remote?.updatedBy || 'Bureau Pastoral',
   };

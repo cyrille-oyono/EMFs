@@ -106,29 +106,31 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 }) => {
   const { settings, currentUser, refreshSettings, updateSettings } = useAuth();
   
-  // Initialisation immédiate avec données par défaut complètes garantissant zéro écran blanc/gris
   const [sections, setSections] = useState<HomepageSection[]>(() => {
     try {
       const s = Storage.getPublicHomepageSections();
-      return Array.isArray(s) && s.length > 0 ? s : INITIAL_HOMEPAGE_SECTIONS;
+      if (Array.isArray(s)) return s;
+      return [];
     } catch {
-      return INITIAL_HOMEPAGE_SECTIONS;
+      return [];
     }
   });
   const [events, setEvents] = useState<Event[]>(() => {
     try {
       const e = Storage.getEvents();
-      return Array.isArray(e) && e.length > 0 ? e : INITIAL_EVENTS;
+      if (Array.isArray(e)) return e;
+      return [];
     } catch {
-      return INITIAL_EVENTS;
+      return [];
     }
   });
   const [testimonials, setTestimonials] = useState<Testimonial[]>(() => {
     try {
       const t = Storage.getTestimonials(true);
-      return Array.isArray(t) && t.length > 0 ? t : INITIAL_TESTIMONIALS;
+      if (Array.isArray(t)) return t;
+      return [];
     } catch {
-      return INITIAL_TESTIMONIALS;
+      return [];
     }
   });
   const [todayVerse, setTodayVerse] = useState<DailyBibleVerse | undefined>(() => {
@@ -141,15 +143,17 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   const [mediaItems, setMediaItems] = useState<MediaItem[]>(() => {
     try {
       const m = Storage.getMediaItems();
-      return Array.isArray(m) && m.length > 0 ? m : INITIAL_MEDIA;
+      if (Array.isArray(m)) return m;
+      return [];
     } catch {
-      return INITIAL_MEDIA;
+      return [];
     }
   });
   const [latestServiceMedia, setLatestServiceMedia] = useState<LatestServiceMedia>(() => {
     try {
       const m = Storage.getLatestServiceMedia();
-      return m && typeof m === 'object' && m.serviceTitle ? m : INITIAL_LATEST_SERVICE_MEDIA;
+      if (m && typeof m === 'object') return m;
+      return INITIAL_LATEST_SERVICE_MEDIA;
     } catch {
       return INITIAL_LATEST_SERVICE_MEDIA;
     }
@@ -158,19 +162,19 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   const [carouselSlides, setCarouselSlides] = useState<HomepageCarouselSlide[]>(() => {
     try {
       const s = Storage.getCarouselSlides();
-      if (isStorageInit && Array.isArray(s)) return s;
-      return Array.isArray(s) && s.length > 0 ? s : INITIAL_CAROUSEL_SLIDES;
+      if (Array.isArray(s)) return s;
+      return [];
     } catch {
-      return INITIAL_CAROUSEL_SLIDES;
+      return [];
     }
   });
   const [weeklyPrograms, setWeeklyPrograms] = useState<WeeklyProgram[]>(() => {
     try {
       const p = Storage.getWeeklyPrograms();
-      if (isStorageInit && Array.isArray(p)) return p;
-      return Array.isArray(p) && p.length > 0 ? p : INITIAL_WEEKLY_PROGRAMS;
+      if (Array.isArray(p)) return p;
+      return [];
     } catch {
-      return INITIAL_WEEKLY_PROGRAMS;
+      return [];
     }
   });
   const [isManageCarouselOpen, setIsManageCarouselOpen] = useState(false);
@@ -199,9 +203,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   );
 
   // Dynamic Posts State (Table Supabase dynamic_posts)
-  const [dynamicPosts, setDynamicPosts] = useState<DynamicPost[]>(() => {
-    return FALLBACK_DYNAMIC_POSTS;
-  });
+  const [dynamicPosts, setDynamicPosts] = useState<DynamicPost[]>(() => []);
   const [selectedPostCategory, setSelectedPostCategory] = useState<string>('TOUS');
   const [selectedPostModal, setSelectedPostModal] = useState<DynamicPost | null>(null);
   const [isAddPostModalOpen, setIsAddPostModalOpen] = useState(false);
@@ -244,25 +246,25 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   const loadData = async () => {
     try {
       const [secList, evts, tst, vrs, med, slides, lastMedia, progs, posts] = await Promise.all([
-        apiClient.getPublicHomepageSections().catch(() => INITIAL_HOMEPAGE_SECTIONS),
-        apiClient.getEvents().catch(() => INITIAL_EVENTS),
-        apiClient.getTestimonials(true).catch(() => INITIAL_TESTIMONIALS),
+        apiClient.getPublicHomepageSections().catch(() => []),
+        apiClient.getEvents().catch(() => []),
+        apiClient.getTestimonials(true).catch(() => []),
         apiClient.getTodayVerse().catch(() => undefined),
-        apiClient.getMediaItems().catch(() => INITIAL_MEDIA),
-        apiClient.getCarouselSlides().catch(() => INITIAL_CAROUSEL_SLIDES),
-        apiClient.getLatestServiceMedia().catch(() => INITIAL_LATEST_SERVICE_MEDIA),
-        apiClient.getWeeklyPrograms().catch(() => INITIAL_WEEKLY_PROGRAMS),
-        apiClient.getDynamicPosts().catch(() => FALLBACK_DYNAMIC_POSTS),
+        apiClient.getMediaItems().catch(() => []),
+        apiClient.getCarouselSlides().catch(() => []),
+        apiClient.getLatestServiceMedia().catch(() => null),
+        apiClient.getWeeklyPrograms().catch(() => []),
+        apiClient.getDynamicPosts().catch(() => []),
       ]);
-      if (Array.isArray(secList) && secList.length > 0) setSections(secList);
-      if (Array.isArray(evts) && evts.length > 0) setEvents(evts);
-      if (Array.isArray(tst) && tst.length > 0) setTestimonials(tst);
-      if (vrs) setTodayVerse(vrs);
-      if (Array.isArray(med) && med.length > 0) setMediaItems(med);
-      if (Array.isArray(slides) && slides.length > 0) setCarouselSlides(slides);
-      if (lastMedia && lastMedia.serviceTitle) setLatestServiceMedia(lastMedia);
-      if (Array.isArray(progs) && progs.length > 0) setWeeklyPrograms(progs);
-      if (Array.isArray(posts) && posts.length > 0) setDynamicPosts(posts);
+      if (Array.isArray(secList)) setSections(secList);
+      if (Array.isArray(evts)) setEvents(evts);
+      if (Array.isArray(tst)) setTestimonials(tst);
+      if (vrs !== undefined) setTodayVerse(vrs);
+      if (Array.isArray(med)) setMediaItems(med);
+      if (Array.isArray(slides)) setCarouselSlides(slides);
+      if (lastMedia && typeof lastMedia === 'object') setLatestServiceMedia(lastMedia);
+      if (Array.isArray(progs)) setWeeklyPrograms(progs);
+      if (Array.isArray(posts)) setDynamicPosts(posts);
       setLastSyncedTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err) {
       console.warn('Note chargement public (secours actif):', err);
