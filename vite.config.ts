@@ -23,16 +23,76 @@ export default defineConfig(() => {
             }).catch(console.error);
           }
 
-          // Middleware pour persistance disque /api/storage dans Vite dev
+          // Middleware pour persistance disque /api/storage, /api/carousel-slides, et /api/presentation-image
           server.middlewares.use((req, res, next) => {
             const parsedUrl = req.url ? req.url.split('?')[0] : '';
-            if (parsedUrl === '/api/storage') {
-              const dataDir = path.resolve(__dirname, 'data');
-              const databaseFilePath = path.join(dataDir, 'database.json');
-              if (!fs.existsSync(dataDir)) {
-                try { fs.mkdirSync(dataDir, { recursive: true }); } catch {}
-              }
+            const dataDir = path.resolve(__dirname, 'data');
+            const databaseFilePath = path.join(dataDir, 'database.json');
+            if (!fs.existsSync(dataDir)) {
+              try { fs.mkdirSync(dataDir, { recursive: true }); } catch {}
+            }
 
+            if (parsedUrl === '/api/carousel-slides' && req.method === 'POST') {
+              let body = '';
+              req.on('data', (chunk) => { body += chunk; });
+              req.on('end', () => {
+                try {
+                  const { slides } = JSON.parse(body);
+                  if (Array.isArray(slides)) {
+                    let cur: any = {};
+                    if (fs.existsSync(databaseFilePath)) {
+                      try { cur = JSON.parse(fs.readFileSync(databaseFilePath, 'utf-8')); } catch {}
+                    }
+                    cur.carouselSlides = slides;
+                    fs.writeFileSync(databaseFilePath, JSON.stringify(cur, null, 2), 'utf-8');
+                    res.setHeader('Content-Type', 'application/json');
+                    return res.end(JSON.stringify({ success: true, count: slides.length }));
+                  }
+                  res.statusCode = 400;
+                  res.setHeader('Content-Type', 'application/json');
+                  return res.end(JSON.stringify({ success: false, message: 'Invalid slides payload' }));
+                } catch (err: any) {
+                  res.statusCode = 500;
+                  res.setHeader('Content-Type', 'application/json');
+                  return res.end(JSON.stringify({ success: false, error: err?.message }));
+                }
+              });
+              return;
+            }
+
+            if (parsedUrl === '/api/presentation-image' && req.method === 'POST') {
+              let body = '';
+              req.on('data', (chunk) => { body += chunk; });
+              req.on('end', () => {
+                try {
+                  const { imageUrl, sections } = JSON.parse(body);
+                  let cur: any = {};
+                  if (fs.existsSync(databaseFilePath)) {
+                    try { cur = JSON.parse(fs.readFileSync(databaseFilePath, 'utf-8')); } catch {}
+                  }
+                  if (!cur.cmsState) cur.cmsState = { publishedSections: [], draftSections: [] };
+                  if (Array.isArray(sections) && sections.length > 0) {
+                    cur.cmsState.publishedSections = sections;
+                  } else {
+                    const pub = cur.cmsState.publishedSections || [];
+                    const p = pub.find((s: any) => s.key === 'presentation');
+                    if (p) p.imageUrl = imageUrl;
+                    cur.cmsState.publishedSections = pub;
+                  }
+                  cur.presentationImage = imageUrl;
+                  fs.writeFileSync(databaseFilePath, JSON.stringify(cur, null, 2), 'utf-8');
+                  res.setHeader('Content-Type', 'application/json');
+                  return res.end(JSON.stringify({ success: true, imageUrl }));
+                } catch (err: any) {
+                  res.statusCode = 500;
+                  res.setHeader('Content-Type', 'application/json');
+                  return res.end(JSON.stringify({ success: false, error: err?.message }));
+                }
+              });
+              return;
+            }
+
+            if (parsedUrl === '/api/storage') {
               if (req.method === 'GET') {
                 try {
                   if (fs.existsSync(databaseFilePath)) {
@@ -92,6 +152,10 @@ export default defineConfig(() => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/supabase-proxy/, ''),
           secure: false,
+          headers: {
+            apikey: 'sb_publishable_dHeTb1557Tlo9tJSQCgR4w_PKN_a3P6',
+            Authorization: 'Bearer sb_publishable_dHeTb1557Tlo9tJSQCgR4w_PKN_a3P6',
+          },
         },
       },
     },

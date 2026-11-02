@@ -28,6 +28,7 @@ import {
   DollarSign,
   Heart,
   MessageSquare,
+  RefreshCw,
 } from 'lucide-react';
 import { HomepageCarouselSlide } from '../../types';
 import { apiClient } from '../../services/apiClient';
@@ -309,6 +310,8 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
   const { currentUser } = useAuth();
   const [editingSlide, setEditingSlide] = useState<HomepageCarouselSlide | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [localSlides, setLocalSlides] = useState<HomepageCarouselSlide[]>(slides);
   const [notification, setNotification] = useState<string | null>(null);
   const [imageSourceTab, setImageSourceTab] = useState<'UPLOAD' | 'DRIVE' | 'WEB' | 'PRESETS'>('PRESETS');
   const [driveUrlInput, setDriveUrlInput] = useState('');
@@ -316,6 +319,10 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+
+  useEffect(() => {
+    setLocalSlides(slides);
+  }, [slides]);
 
   const [formData, setFormData] = useState<Omit<HomepageCarouselSlide, 'id'>>({
     badge: 'Culte & Louange',
@@ -328,7 +335,7 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
     secondaryButtonText: 'Médias du Culte',
     secondaryButtonLink: '#dernier-culte',
     isActive: true,
-    order: slides.length + 1,
+    order: (slides?.length || 0) + 1,
   });
 
   useEffect(() => {
@@ -463,12 +470,31 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
     }
 
     try {
+      setIsSaving(true);
+      const cleanedData: Omit<HomepageCarouselSlide, 'id'> = {
+        ...formData,
+        title: formData.title.trim(),
+        subtitle: formData.subtitle?.trim() || formData.title.trim(),
+        description: formData.description?.trim() || '',
+        imageUrl: formData.imageUrl.trim(),
+        badge: formData.badge?.trim() || 'Culte & Louange',
+        primaryButtonText: formData.primaryButtonText?.trim() || 'Découvrir',
+        primaryButtonLink: formData.primaryButtonLink?.trim() || '#services',
+        secondaryButtonText: formData.secondaryButtonText?.trim() || '',
+        secondaryButtonLink: formData.secondaryButtonLink?.trim() || '',
+        order: Number(formData.order) || localSlides.length + 1,
+      };
+
       if (isCreating) {
-        await apiClient.createCarouselSlide(formData, currentUser || undefined);
-        showToast('Nouvelle diapositive ajoutée au carrousel d’accueil !');
+        const created = await apiClient.createCarouselSlide(cleanedData, currentUser || undefined);
+        setLocalSlides((prev) => [...prev, created]);
+        showToast('✓ Nouvelle diapositive enregistrée et ajoutée au carrousel d’accueil !');
       } else if (editingSlide) {
-        await apiClient.updateCarouselSlide(editingSlide.id, formData, currentUser || undefined);
-        showToast('Diapositive mise à jour.');
+        const updated = await apiClient.updateCarouselSlide(editingSlide.id, cleanedData, currentUser || undefined);
+        if (updated) {
+          setLocalSlides((prev) => prev.map((s) => (s.id === editingSlide.id ? updated : s)));
+        }
+        showToast('✓ Diapositive mise à jour avec succès.');
       }
 
       setIsCreating(false);
@@ -477,11 +503,14 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
     } catch (err) {
       console.error('Error saving slide:', err);
       alert('Une erreur est survenue lors de l’enregistrement de la diapositive.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDelete = async (id: string, title: string) => {
     if (confirm(`Confirmer la suppression de la diapositive "${title}" du carrousel ?`)) {
+      setLocalSlides((prev) => prev.filter((s) => s.id !== id));
       await apiClient.deleteCarouselSlide(id, currentUser || undefined);
       showToast('Diapositive supprimée.');
       onSlidesUpdated();
@@ -489,6 +518,7 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
   };
 
   const handleToggleActive = async (slide: HomepageCarouselSlide) => {
+    setLocalSlides((prev) => prev.map((s) => (s.id === slide.id ? { ...s, isActive: !s.isActive } : s)));
     await apiClient.updateCarouselSlide(slide.id, { isActive: !slide.isActive }, currentUser || undefined);
     showToast(slide.isActive ? 'Diapositive masquée du portail.' : 'Diapositive activée et visible.');
     onSlidesUpdated();
@@ -496,17 +526,29 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
 
   // Move slide up/down
   const handleMoveOrder = async (slide: HomepageCarouselSlide, direction: 'UP' | 'DOWN') => {
-    const sorted = [...slides].sort((a, b) => a.order - b.order);
+    const sorted = [...localSlides].sort((a, b) => a.order - b.order);
     const index = sorted.findIndex((s) => s.id === slide.id);
     if (index === -1) return;
 
     if (direction === 'UP' && index > 0) {
       const prev = sorted[index - 1];
+      const newLocal = sorted.map((s) => {
+        if (s.id === slide.id) return { ...s, order: prev.order };
+        if (s.id === prev.id) return { ...s, order: slide.order };
+        return s;
+      });
+      setLocalSlides(newLocal);
       await apiClient.updateCarouselSlide(slide.id, { order: prev.order }, currentUser || undefined);
       await apiClient.updateCarouselSlide(prev.id, { order: slide.order }, currentUser || undefined);
       onSlidesUpdated();
     } else if (direction === 'DOWN' && index < sorted.length - 1) {
       const next = sorted[index + 1];
+      const newLocal = sorted.map((s) => {
+        if (s.id === slide.id) return { ...s, order: next.order };
+        if (s.id === next.id) return { ...s, order: slide.order };
+        return s;
+      });
+      setLocalSlides(newLocal);
       await apiClient.updateCarouselSlide(slide.id, { order: next.order }, currentUser || undefined);
       await apiClient.updateCarouselSlide(next.id, { order: slide.order }, currentUser || undefined);
       onSlidesUpdated();
@@ -765,11 +807,10 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">
-                        Sous-titre explicatif *
+                        Sous-titre explicatif
                       </label>
                       <textarea
                         rows={2}
-                        required
                         value={formData.subtitle}
                         onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
                         placeholder="Ex: Chaque dimanche dès 09h00, rejoignez une assemblée fervente et fraternelle..."
@@ -1443,21 +1484,31 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                     <div className="flex items-center space-x-2 self-end sm:self-auto">
                       <button
                         type="button"
+                        disabled={isSaving}
                         onClick={() => {
                           setIsCreating(false);
                           setEditingSlide(null);
                         }}
-                        className="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition cursor-pointer"
+                        className="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
                       >
                         Annuler
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-2 bg-[#4A0E17] hover:bg-[#6E1325] text-white font-black rounded-xl shadow-lg transition flex items-center space-x-1.5 cursor-pointer"
+                        disabled={isSaving}
+                        className="px-5 py-2.5 bg-[#4A0E17] hover:bg-[#6E1325] text-white font-black rounded-xl shadow-lg transition flex items-center space-x-2 cursor-pointer disabled:opacity-50"
                       >
-                        <Check className="w-4 h-4 text-[#C99B2E]" />
+                        {isSaving ? (
+                          <RefreshCw className="w-4 h-4 animate-spin text-[#C99B2E]" />
+                        ) : (
+                          <Check className="w-4 h-4 text-[#C99B2E]" />
+                        )}
                         <span>
-                          {isCreating ? 'Enregistrer et Ajouter au Carrousel' : 'Enregistrer les Modifications'}
+                          {isSaving
+                            ? 'Enregistrement en cours...'
+                            : isCreating
+                            ? 'Enregistrer et Ajouter au Carrousel'
+                            : 'Enregistrer les Modifications'}
                         </span>
                       </button>
                     </div>
@@ -1470,13 +1521,13 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
           {/* List of Existing Slides */}
           <div className="space-y-3">
             <div className="flex items-center justify-between text-xs font-bold text-slate-700 px-1">
-              <span>Diapositives configurées ({slides.length}) :</span>
+              <span>Diapositives configurées ({localSlides.length}) :</span>
               <span className="text-[11px] text-slate-400 font-normal">
                 Cliquez sur les flèches pour changer l’ordre de défilement
               </span>
             </div>
 
-            {slides.length === 0 ? (
+            {localSlides.length === 0 ? (
               <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                 <ImageIcon className="w-8 h-8 text-slate-300 mx-auto" />
                 <p className="text-xs text-slate-500 font-bold">Aucune diapositive dans le carrousel.</p>
@@ -1488,7 +1539,7 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                 </button>
               </div>
             ) : (
-              slides
+              localSlides
                 .slice()
                 .sort((a, b) => a.order - b.order)
                 .map((slide, index) => (

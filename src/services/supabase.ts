@@ -1092,11 +1092,19 @@ export async function getCMSStateFromSupabase(): Promise<SupabaseCMSPayload> {
         if (remoteCMS?.cmsState) {
           const remoteSlides = await getAppContent<HomepageCarouselSlide[]>('carousel_slides');
           const remotePrograms = await getAppContent<WeeklyProgram[]>('weekly_programs');
-          return mergeWithDefaultCMS({
+          const remotePresImg = await getAppContent<string>('presentation_image');
+
+          const merged = mergeWithDefaultCMS({
             ...remoteCMS,
             carouselSlides: remoteSlides || remoteCMS.carouselSlides,
             weeklyPrograms: remotePrograms || remoteCMS.weeklyPrograms,
           });
+
+          if (remotePresImg && merged.cmsState?.publishedSections) {
+            const p = merged.cmsState.publishedSections.find((s) => s.key === 'presentation');
+            if (p) p.imageUrl = remotePresImg;
+          }
+          return merged;
         }
 
         // 2. Fallback historique sur church_settings

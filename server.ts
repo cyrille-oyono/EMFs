@@ -12,7 +12,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-app.use(express.json({ limit: '15mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Healthcheck
 app.get('/api/health', (req: Request, res: Response) => {
@@ -22,6 +23,132 @@ app.get('/api/health', (req: Request, res: Response) => {
     church: 'Église Missionnaire de la Foi de Sangmelima',
     timestamp: new Date().toISOString(),
   });
+});
+
+// Supabase Proxy to bypass browser iframe CORS restrictions
+const SUPABASE_ORIGIN = 'https://rahkriftfhqwgrnkpyiy.supabase.co';
+const SUPABASE_SERVICE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_dHeTb1557Tlo9tJSQCgR4w_PKN_a3P6';
+
+app.all('/api/supabase-proxy*', async (req: Request, res: Response) => {
+  try {
+    const relativePath = req.originalUrl.replace(/^\/api\/supabase-proxy/, '');
+    const targetUrl = `${SUPABASE_ORIGIN}${relativePath}`;
+
+    const forwardHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Forward any relevant headers from incoming client request
+    for (const [key, value] of Object.entries(req.headers)) {
+      const lower = key.toLowerCase();
+      if (!['host', 'connection', 'content-length', 'transfer-encoding', 'cookie'].includes(lower) && typeof value === 'string') {
+        forwardHeaders[lower] = value;
+      }
+    }
+
+    if (!forwardHeaders['apikey']) {
+      forwardHeaders['apikey'] = SUPABASE_SERVICE_KEY;
+    }
+    if (!forwardHeaders['authorization']) {
+      forwardHeaders['authorization'] = `Bearer ${SUPABASE_SERVICE_KEY}`;
+    }
+
+    const fetchOptions: RequestInit = {
+      method: req.method,
+      headers: forwardHeaders,
+    };
+
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body && Object.keys(req.body).length > 0) {
+      fetchOptions.body = JSON.stringify(req.body);
+    }
+
+    const remoteRes = await fetch(targetUrl, fetchOptions);
+
+    res.status(remoteRes.status);
+    remoteRes.headers.forEach((val, key) => {
+      const lower = key.toLowerCase();
+      if (!['content-encoding', 'transfer-encoding', 'content-length'].includes(lower)) {
+        res.setHeader(key, val);
+      }
+    });
+
+    const responseText = await remoteRes.text();
+    return res.send(responseText);
+  } catch (proxyErr: any) {
+    console.error('Supabase proxy error:', proxyErr);
+    return res.status(502).json({
+      success: false,
+      error: 'Erreur lors du relais Supabase',
+      details: proxyErr?.message || String(proxyErr),
+    });
+  }
+});
+
+// Dedicated Carousel Slides persistence endpoint
+app.post('/api/carousel-slides', (req: Request, res: Response) => {
+  try {
+    const { slides } = req.body;
+    if (!Array.isArray(slides)) {
+      return res.status(400).json({ success: false, message: 'Liste de diapositives requise (slides)' });
+    }
+
+    let currentData: any = {};
+    if (fs.existsSync(databaseFilePath)) {
+      try {
+        currentData = JSON.parse(fs.readFileSync(databaseFilePath, 'utf-8'));
+      } catch {
+        currentData = {};
+      }
+    }
+
+    currentData.carouselSlides = slides;
+    fs.writeFileSync(databaseFilePath, JSON.stringify(currentData, null, 2), 'utf-8');
+    return res.json({ success: true, count: slides.length });
+  } catch (err: any) {
+    console.error('Error saving carousel slides:', err);
+    return res.status(500).json({ success: false, error: err?.message || 'Error saving slides' });
+  }
+});
+
+// Dedicated Presentation Image persistence endpoint
+app.post('/api/presentation-image', (req: Request, res: Response) => {
+  try {
+    const { imageUrl, sections } = req.body;
+    if (typeof imageUrl !== 'string') {
+      return res.status(400).json({ success: false, message: 'imageUrl string requise' });
+    }
+
+    let currentData: any = {};
+    if (fs.existsSync(databaseFilePath)) {
+      try {
+        currentData = JSON.parse(fs.readFileSync(databaseFilePath, 'utf-8'));
+      } catch {
+        currentData = {};
+      }
+    }
+
+    if (!currentData.cmsState) {
+      currentData.cmsState = { publishedSections: [], draftSections: [] };
+    }
+
+    if (Array.isArray(sections) && sections.length > 0) {
+      currentData.cmsState.publishedSections = sections;
+    } else {
+      const pub = currentData.cmsState.publishedSections || [];
+      const pres = pub.find((s: any) => s.key === 'presentation');
+      if (pres) {
+        pres.imageUrl = imageUrl;
+      }
+      currentData.cmsState.publishedSections = pub;
+    }
+
+    currentData.presentationImage = imageUrl;
+    fs.writeFileSync(databaseFilePath, JSON.stringify(currentData, null, 2), 'utf-8');
+    return res.json({ success: true, imageUrl });
+  } catch (err: any) {
+    console.error('Error saving presentation image:', err);
+    return res.status(500).json({ success: false, error: err?.message || 'Error saving image' });
+  }
 });
 
 // Realtime broadcast endpoint

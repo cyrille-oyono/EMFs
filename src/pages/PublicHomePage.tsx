@@ -256,12 +256,33 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
         apiClient.getWeeklyPrograms().catch(() => []),
         apiClient.getDynamicPosts().catch(() => []),
       ]);
-      if (Array.isArray(secList)) setSections(secList);
+      if (Array.isArray(secList) && secList.length > 0) {
+        setSections((prev) => {
+          const prevPres = prev.find((s) => s.key === 'presentation');
+          if (prevPres?.imageUrl && prevPres.imageUrl.trim() !== '') {
+            return secList.map((s) => {
+              if (s.key === 'presentation' && (!s.imageUrl || s.imageUrl.trim() === '')) {
+                return { ...s, imageUrl: prevPres.imageUrl };
+              }
+              return s;
+            });
+          }
+          return secList;
+        });
+      }
       if (Array.isArray(evts)) setEvents(evts);
       if (Array.isArray(tst)) setTestimonials(tst);
       if (vrs !== undefined) setTodayVerse(vrs);
       if (Array.isArray(med)) setMediaItems(med);
-      if (Array.isArray(slides)) setCarouselSlides(slides);
+      if (Array.isArray(slides) && slides.length > 0) {
+        setCarouselSlides((prev) => {
+          const slideIds = new Set(slides.map((s) => s.id));
+          const unsynced = prev.filter((s) => !slideIds.has(s.id));
+          return [...slides, ...unsynced].sort((a, b) => (a.order || 0) - (b.order || 0));
+        });
+      } else if (Array.isArray(slides)) {
+        setCarouselSlides(slides);
+      }
       if (lastMedia && typeof lastMedia === 'object') setLatestServiceMedia(lastMedia);
       if (Array.isArray(progs)) setWeeklyPrograms(progs);
       if (Array.isArray(posts)) setDynamicPosts(posts);
@@ -781,7 +802,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
             {/* Right Column: Grand Format Présentation Image (Dimensions Augmentées) */}
             <div className="lg:col-span-6 flex flex-col items-center justify-center w-full my-auto self-center text-center">
-              {presentationSec.imageUrl && !presentationSec.imageUrl.includes('511795409834') ? (
+              {presentationSec?.imageUrl && presentationSec.imageUrl.trim() !== '' ? (
                 <div className="relative group rounded-3xl overflow-hidden shadow-2xl border-4 border-white dark:border-slate-800 ring-2 ring-[#C99B2E]/40 bg-slate-950 w-full flex items-center justify-center text-center">
                   <img
                     src={presentationSec.imageUrl}

@@ -708,20 +708,31 @@ export const apiClient = {
   },
 
   async getPublicHomepageSections(): Promise<HomepageSection[]> {
+    const local = Storage.getPublicHomepageSections();
     if (isSupabaseConfigured()) {
       try {
         const remote = await getCMSStateFromSupabase();
-        if (remote?.cmsState?.publishedSections) {
+        if (remote?.cmsState?.publishedSections && remote.cmsState.publishedSections.length > 0) {
+          // Si local a une image de présentation personnalisée et remote est vide ou ancienne, la conserver
+          const localPres = local.find((s) => s.key === 'presentation');
+          const remotePres = remote.cmsState.publishedSections.find((s) => s.key === 'presentation');
+          if (localPres?.imageUrl && remotePres && (!remotePres.imageUrl || remotePres.imageUrl.trim() === '')) {
+            remotePres.imageUrl = localPres.imageUrl;
+          }
           Storage.setCMSState(remote.cmsState);
-          if (remote.carouselSlides) Storage.setCarouselSlides(remote.carouselSlides);
-          if (remote.weeklyPrograms) Storage.setWeeklyPrograms(remote.weeklyPrograms);
+          if (remote.carouselSlides && remote.carouselSlides.length > 0) {
+            Storage.setCarouselSlides(remote.carouselSlides);
+          }
+          if (remote.weeklyPrograms && remote.weeklyPrograms.length > 0) {
+            Storage.setWeeklyPrograms(remote.weeklyPrograms);
+          }
           return Storage.getPublicHomepageSections();
         }
       } catch (err) {
         console.warn('Erreur chargement sections publiques depuis Supabase:', err);
       }
     }
-    return Storage.getPublicHomepageSections();
+    return local;
   },
 
   async saveDraftSections(sections: HomepageSection[], user?: User): Promise<HomepageCMSState> {
@@ -781,10 +792,27 @@ export const apiClient = {
 
   async updatePresentationImage(imageUrl: string, user?: User): Promise<HomepageCMSState> {
     const res = Storage.updatePresentationImage(imageUrl, user);
+    const updatedSections = Storage.getPublicHomepageSections();
+
+    // 1. Sauvegarde instantanée sur le disque serveur
+    if (typeof fetch === 'function') {
+      try {
+        await fetch('/api/presentation-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl, sections: updatedSections }),
+        });
+      } catch (e) {
+        console.warn('Notice sauvegarde disque image présentation:', e);
+      }
+    }
+
+    // 2. Sauvegarde maîtresse directe dans Supabase (app_content & church_settings)
     if (isSupabaseConfigured()) {
       try {
-        await Promise.all([
+        await Promise.allSettled([
           saveAppContent('presentation_image', imageUrl),
+          saveAppContent('homepage_sections', updatedSections),
           saveChurchSettingsToSupabase(Storage.getSettings()),
           apiClient.syncFullCMSToSupabase(user),
         ]);
@@ -1059,18 +1087,23 @@ export const apiClient = {
 
   // Carousel
   async getCarouselSlides(): Promise<HomepageCarouselSlide[]> {
+    const local = Storage.getCarouselSlides();
     if (isSupabaseConfigured()) {
       try {
         const remote = await getCMSStateFromSupabase();
         if (remote?.carouselSlides && remote.carouselSlides.length > 0) {
-          Storage.setCarouselSlides(remote.carouselSlides);
-          return Storage.getCarouselSlides();
+          // Merge pour préserver toute diapositive locale récemment créée non encore répliquée
+          const remoteIds = new Set(remote.carouselSlides.map((s) => s.id));
+          const localOnly = local.filter((s) => !remoteIds.has(s.id));
+          const merged = [...remote.carouselSlides, ...localOnly].sort((a, b) => (a.order || 0) - (b.order || 0));
+          Storage.setCarouselSlides(merged);
+          return merged;
         }
       } catch (err) {
         // ignore
       }
     }
-    return Storage.getCarouselSlides();
+    return local;
   },
 
   async createCarouselSlide(
@@ -1078,9 +1111,28 @@ export const apiClient = {
     user?: User
   ): Promise<HomepageCarouselSlide> {
     const res = Storage.createCarouselSlide(data, user);
+    const allSlides = Storage.getCarouselSlides();
+
+    // 1. Écriture immédiate sur le disque serveur
+    if (typeof fetch === 'function') {
+      try {
+        await fetch('/api/carousel-slides', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slides: allSlides }),
+        });
+      } catch (e) {
+        console.warn('Notice sauvegarde disque carrousel:', e);
+      }
+    }
+
+    // 2. Écriture immédiate dans Supabase
     if (isSupabaseConfigured()) {
       try {
-        await apiClient.syncFullCMSToSupabase(user);
+        await Promise.allSettled([
+          saveAppContent('carousel_slides', allSlides),
+          apiClient.syncFullCMSToSupabase(user),
+        ]);
       } catch (err) {
         console.warn('Erreur Supabase createCarouselSlide:', err);
       }
@@ -1095,27 +1147,69 @@ export const apiClient = {
     user?: User
   ): Promise<HomepageCarouselSlide | null> {
     const res = Storage.updateCarouselSlide(id, updates, user);
-    if (res && isSupabaseConfigured()) {
-      try {
-        await apiClient.syncFullCMSToSupabase(user);
-      } catch (err) {
-        console.warn('Erreur Supabase updateCarouselSlide:', err);
+    if (res) {
+      const allSlides = Storage.getCarouselSlides();
+
+      // 1. Écriture immédiate sur le disque serveur
+      if (typeof fetch === 'function') {
+        try {
+          await fetch('/api/carousel-slides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slides: allSlides }),
+          });
+        } catch (e) {
+          console.warn('Notice sauvegarde disque carrousel:', e);
+        }
       }
+
+      // 2. Écriture immédiate dans Supabase
+      if (isSupabaseConfigured()) {
+        try {
+          await Promise.allSettled([
+            saveAppContent('carousel_slides', allSlides),
+            apiClient.syncFullCMSToSupabase(user),
+          ]);
+        } catch (err) {
+          console.warn('Erreur Supabase updateCarouselSlide:', err);
+        }
+      }
+      churchSyncService.broadcastCmsUpdated();
     }
-    churchSyncService.broadcastCmsUpdated();
     return res;
   },
 
   async deleteCarouselSlide(id: string, user?: User): Promise<boolean> {
     const res = Storage.deleteCarouselSlide(id, user);
-    if (res && isSupabaseConfigured()) {
-      try {
-        await apiClient.syncFullCMSToSupabase(user);
-      } catch (err) {
-        console.warn('Erreur Supabase deleteCarouselSlide:', err);
+    if (res) {
+      const allSlides = Storage.getCarouselSlides();
+
+      // 1. Écriture immédiate sur le disque serveur
+      if (typeof fetch === 'function') {
+        try {
+          await fetch('/api/carousel-slides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slides: allSlides }),
+          });
+        } catch (e) {
+          console.warn('Notice sauvegarde disque carrousel suppression:', e);
+        }
       }
+
+      // 2. Écriture immédiate dans Supabase
+      if (isSupabaseConfigured()) {
+        try {
+          await Promise.allSettled([
+            saveAppContent('carousel_slides', allSlides),
+            apiClient.syncFullCMSToSupabase(user),
+          ]);
+        } catch (err) {
+          console.warn('Erreur Supabase deleteCarouselSlide:', err);
+        }
+      }
+      churchSyncService.broadcastCmsUpdated();
     }
-    churchSyncService.broadcastCmsUpdated();
     return res;
   },
 
