@@ -23,10 +23,16 @@ import {
   BookOpen,
   ChevronRight,
   Layers,
+  Camera,
+  Calendar,
+  DollarSign,
+  Heart,
+  MessageSquare,
 } from 'lucide-react';
 import { HomepageCarouselSlide } from '../../types';
 import { apiClient } from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
+import { compressImageFile } from '../../utils/mediaUpload';
 
 interface ManageCarouselModalProps {
   isOpen: boolean;
@@ -119,60 +125,106 @@ const CHURCH_SLIDE_PRESETS = [
 export interface LinkSuggestion {
   label: string;
   value: string;
-  category: 'CULTES' | 'INSTITUT' | 'CELLULES' | 'RESSOURCES' | 'MEDIAS';
+  category: 'EVENEMENTS' | 'FINANCES' | 'CULTES' | 'INSTITUT' | 'CELLULES' | 'RESSOURCES' | 'MEDIAS';
   suggestedButtonText: string;
   description?: string;
   isExternal?: boolean;
 }
 
 export const LINK_PRESETS: LinkSuggestion[] = [
+  // --- Événements & Actualités de l'Église (Page Dédiée) ---
+  {
+    label: "Tous les Événements & Actualités",
+    value: "/events-and-news",
+    category: 'EVENEMENTS',
+    suggestedButtonText: "Événements & Actualités",
+    description: "Page dédiée regroupant prochains grands événements, veillées, enseignements et annonces",
+  },
+  {
+    label: "Prochains Grands Événements & Veillées",
+    value: "/events-and-news#events",
+    category: 'EVENEMENTS',
+    suggestedButtonText: "Grands Événements",
+    description: "Conventions, veillées de prière, séminaires et retraites spirituelles",
+  },
+  {
+    label: "Enseignements Doctrinaux & Prédications",
+    value: "/events-and-news#teachings",
+    category: 'EVENEMENTS',
+    suggestedButtonText: "Lire les Enseignements",
+    description: "Messages pastoraux, prédications écrites et exhortations bibliques",
+  },
+  {
+    label: "Annonces & Communiqués Pastoraux",
+    value: "/events-and-news#news",
+    category: 'EVENEMENTS',
+    suggestedButtonText: "Voir les Annonces",
+    description: "Dernières actualités officielles et communiqués de la direction de l'église",
+  },
+
+  // --- Dîmes, Offrandes & Finances ---
+  {
+    label: "Dîmes, Offrandes & Libéralités",
+    value: "/finances",
+    category: 'FINANCES',
+    suggestedButtonText: "Donner en Ligne",
+    description: "Contribution financière pour l'œuvre de Dieu, dîmes et offrandes d'actions de grâce",
+  },
+  {
+    label: "Comptes Bancaires & Mobile Money",
+    value: "/finances#accounts",
+    category: 'FINANCES',
+    suggestedButtonText: "Comptes & Coordonnées",
+    description: "RIB bancaires, comptes Orange Money et MTN Mobile Money officiels de la paroisse",
+  },
+
+  // --- Prière & Communion Fraternelle ---
+  {
+    label: "Déposer une Requête de Prière",
+    value: "/prayer-requests",
+    category: 'CELLULES',
+    suggestedButtonText: "Déposer une Prière",
+    description: "Intercession communautaire, fardeau de prière et soutien pastoral direct",
+  },
+  {
+    label: "Cellules de Prière de Maison",
+    value: "/home-cells",
+    category: 'CELLULES',
+    suggestedButtonText: "Rejoindre une Cellule",
+    description: "Annuaire des cellules de prière dans les quartiers de Sangmelima (Akon, Bitom, etc.)",
+  },
+  {
+    label: "Forum Chrétien & Témoignages",
+    value: "/forum",
+    category: 'CELLULES',
+    suggestedButtonText: "Forum de Prière & Foi",
+    description: "Partage biblique, communion fraternelle et questions spirituelles",
+  },
+
   // --- Institut Biblique Parakletos ---
   {
     label: "Inscription Institut Biblique",
     value: "/parakletos#adhesion",
     category: 'INSTITUT',
     suggestedButtonText: "S'inscrire à l'Institut",
-    description: "Formulaire d'admission officiel à l'Institut Parakletos",
+    description: "Formulaire officiel d'admission et candidature à l'Institut Parakletos",
   },
   {
     label: "Présentation Institut Parakletos",
     value: "/parakletos",
     category: 'INSTITUT',
     suggestedButtonText: "Découvrir l'Institut",
-    description: "Cursus, enseignants et filières théologiques",
+    description: "Cursus pastoral, théologique, enseignants qualifiés et filières d'édification",
   },
   {
-    label: "Espace Étudiant & Notes",
+    label: "Espace Étudiant & Bulletins",
     value: "/parakletos#code-access",
     category: 'INSTITUT',
     suggestedButtonText: "Espace Étudiants",
-    description: "Consultation des bulletins avec code d'accès personnel",
+    description: "Consultation des notes et bulletins académiques avec code d'accès personnel",
   },
 
-  // --- Cellules de Prière & Intercession ---
-  {
-    label: "Cellules de Prière de Maison",
-    value: "/home-cells",
-    category: 'CELLULES',
-    suggestedButtonText: "Rejoindre une Cellule",
-    description: "Annuaire des cellules de prière dans les quartiers de Sangmelima",
-  },
-  {
-    label: "Déposer une Requête de Prière",
-    value: "/prayer-requests",
-    category: 'CELLULES',
-    suggestedButtonText: "Déposer une Prière",
-    description: "Intercession communautaire et soutien pastoral direct",
-  },
-  {
-    label: "Forum & Échanges Chrétiens",
-    value: "/forum",
-    category: 'CELLULES',
-    suggestedButtonText: "Forum de Prière & Foi",
-    description: "Partage biblique et communion entre chrétiens",
-  },
-
-  // --- Ressources Bibliques & Documents ---
+  // --- Ressources Bibliques & Téléchargements ---
   {
     label: "Bibliothèque de Ressources & Fichiers",
     value: "/resources",
@@ -185,51 +237,44 @@ export const LINK_PRESETS: LinkSuggestion[] = [
     value: "/resources?cat=PRIERE",
     category: 'RESSOURCES',
     suggestedButtonText: "Guides de Prière & Méditations",
-    description: "Plans de lecture, programmes de jeûne et manuels d'édification",
+    description: "Plans de lecture, programmes de jeûne et manuels d'édification chrétienne",
   },
   {
     label: "Enseignements & Études Bibliques",
     value: "/resources?cat=ETUDE_BIBLIQUE",
     category: 'RESSOURCES',
     suggestedButtonText: "Études Bibliques Complètes",
-    description: "Supports doctrinaux et thématiques pour affranchir la foi",
+    description: "Supports doctrinaux et thématiques pour affranchir et affermir la foi",
   },
   {
     label: "Verset du Jour & Méditation",
     value: "#verse",
     category: 'RESSOURCES',
     suggestedButtonText: "Méditer le Verset du Jour",
-    description: "Passage quotidien commenté avec pensée du pasteur",
+    description: "Passage quotidien commenté avec pensée pastorale",
   },
 
-  // --- Cultes, Événements & Médias ---
+  // --- Cultes, Médiathèque & Paroisse ---
   {
-    label: "Horaires & Cultes au Temple",
+    label: "Horaires & Rendez-vous des Cultes",
     value: "#services",
     category: 'CULTES',
     suggestedButtonText: "Découvrir nos Cultes",
-    description: "Rendez-vous dominicaux et réunions en semaine au temple d'Akon",
-  },
-  {
-    label: "Agenda & Calendrier Spirituel",
-    value: "#events",
-    category: 'CULTES',
-    suggestedButtonText: "Voir l'Agenda Complet",
-    description: "Veillées, séminaires, retraites et conventions de l'Église",
-  },
-  {
-    label: "Photos & Vidéos du Dernier Culte",
-    value: "#dernier-culte",
-    category: 'MEDIAS',
-    suggestedButtonText: "Médias du Dernier Culte",
-    description: "Reportage visuel et prédication dominicale",
+    description: "Rendez-vous dominicaux et réunions de prière en semaine au temple d'Akon",
   },
   {
     label: "Médiathèque Complète (Photos & Vidéos)",
     value: "/media-gallery",
     category: 'MEDIAS',
     suggestedButtonText: "Galerie Multimédia",
-    description: "Albums souvenirs, cultes spéciaux et archives vidéo",
+    description: "Albums souvenirs, cultes spéciaux et archives vidéo des rassemblements",
+  },
+  {
+    label: "Photos & Vidéos du Dernier Culte",
+    value: "#dernier-culte",
+    category: 'MEDIAS',
+    suggestedButtonText: "Médias du Dernier Culte",
+    description: "Reportage visuel et prédication du culte dominical le plus récent",
   },
   {
     label: "Témoignages des Fidèles",
@@ -246,11 +291,11 @@ export const LINK_PRESETS: LinkSuggestion[] = [
     description: "Vision, collège pastoral et implantation à Sangmelima",
   },
   {
-    label: "Rejoindre la Communauté EMF",
-    value: "#cta",
+    label: "Rejoindre l'Église (Créer un Compte)",
+    value: "/register",
     category: 'CULTES',
-    suggestedButtonText: "Rejoindre notre Communauté",
-    description: "Accueil des nouveaux convertis et accompagnement fraternel",
+    suggestedButtonText: "Rejoindre notre Assemblée",
+    description: "Inscription des fidèles, nouveaux convertis et accompagnement fraternel",
   },
 ];
 
@@ -269,6 +314,8 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
   const [driveUrlInput, setDriveUrlInput] = useState('');
   const [previewTab, setPreviewTab] = useState<'form' | 'preview'>('form');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   const [formData, setFormData] = useState<Omit<HomepageCarouselSlide, 'id'>>({
     badge: 'Culte & Louange',
@@ -343,8 +390,8 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
     setPreviewTab('form');
   };
 
-  // Local File Upload Handler
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Local File Upload / Camera Capture Handler with automatic optimization
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -353,13 +400,25 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      setFormData((prev) => ({ ...prev, imageUrl: dataUrl }));
-      showToast('Image chargée avec succès depuis votre appareil.');
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsProcessingImage(true);
+      showToast('Optimisation et compression HD de l’image...');
+      const compressed = await compressImageFile(file, 2048, 1152, 0.86);
+      setFormData((prev) => ({ ...prev, imageUrl: compressed.dataUrl }));
+      showToast(`✓ Photo chargée et optimisée (${compressed.sizeMb} Mo) !`);
+    } catch (err) {
+      console.warn('Fallback direct file reader:', err);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        setFormData((prev) => ({ ...prev, imageUrl: dataUrl }));
+        showToast('Photo chargée avec succès depuis votre appareil.');
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsProcessingImage(false);
+      if (e.target) e.target.value = '';
+    }
   };
 
   // Google Drive link conversion
@@ -838,32 +897,68 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                       </div>
                     )}
 
-                    {/* TAB: UPLOAD FILE FROM PHONE/PC */}
+                    {/* TAB: UPLOAD FILE FROM PHONE/PC & LIVE CAMERA */}
                     {imageSourceTab === 'UPLOAD' && (
-                      <div className="space-y-2">
-                        <div
-                          onClick={() => fileInputRef.current?.click()}
-                          className="border-2 border-dashed border-slate-300 hover:border-[#6E1325] rounded-2xl p-6 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition space-y-2"
-                        >
-                          <div className="w-10 h-10 rounded-full bg-blue-50 text-[#6E1325] flex items-center justify-center mx-auto">
-                            <Upload className="w-5 h-5" />
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* Option A: Gallery / File Picker */}
+                          <div
+                            onClick={() => fileInputRef.current?.click()}
+                            className="border-2 border-dashed border-slate-300 hover:border-[#6E1325] rounded-2xl p-5 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition space-y-2 group"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-blue-50 text-[#6E1325] group-hover:scale-110 transition flex items-center justify-center mx-auto">
+                              <Upload className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="font-bold text-xs text-[#4A0E17] block">
+                                Galerie & Fichiers
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                Choisir une photo haute résolution depuis votre téléphone ou PC
+                              </span>
+                            </div>
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                            />
                           </div>
-                          <div>
-                            <span className="font-bold text-xs text-[#4A0E17] block">
-                              Cliquez pour choisir une photo depuis votre téléphone ou ordinateur
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              Formats supportés : JPG, PNG, WebP (Haute résolution recommandée)
-                            </span>
+
+                          {/* Option B: Direct Smartphone Camera */}
+                          <div
+                            onClick={() => cameraInputRef.current?.click()}
+                            className="border-2 border-dashed border-amber-300 hover:border-[#C99B2E] rounded-2xl p-5 text-center cursor-pointer bg-amber-50/50 hover:bg-amber-100/50 transition space-y-2 group"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-amber-100 text-[#4A0E17] group-hover:scale-110 transition flex items-center justify-center mx-auto">
+                              <Camera className="w-5 h-5 text-[#C99B2E]" />
+                            </div>
+                            <div>
+                              <span className="font-bold text-xs text-[#4A0E17] block">
+                                Prendre une Photo (Caméra)
+                              </span>
+                              <span className="text-[10px] text-amber-700/80">
+                                Photographier directement le culte ou l'église avec votre smartphone
+                              </span>
+                            </div>
+                            <input
+                              ref={cameraInputRef}
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                            />
                           </div>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                          />
                         </div>
+
+                        {isProcessingImage && (
+                          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-center space-x-2 text-xs font-bold text-amber-900 animate-pulse">
+                            <Sparkles className="w-4 h-4 text-[#C99B2E] animate-spin" />
+                            <span>Optimisation HD de la photo en cours...</span>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -947,7 +1042,7 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                         </p>
                       </div>
                       <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-                        ⚡ Raccourcis : Institut Biblique, Cellules & Ressources
+                        ⚡ Liens directs vers les services de la paroisse
                       </span>
                     </div>
 
@@ -955,20 +1050,106 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold text-[#4A0E17]">
-                          Propositions Recommandées pour ce carrousel :
+                          Raccourcis Recommandés pour vos Boutons d'Accueil :
                         </span>
-                        <span className="text-[10px] text-slate-400">Cliquez pour appliquer au bouton voulu</span>
+                        <span className="text-[10px] text-slate-400">Cliquez pour attribuer au Bouton 1 ou 2</span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        {/* Option 1: Inscription Institut Biblique */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        {/* Option 1: Événements & Actualités */}
+                        <div className="p-2.5 bg-amber-50/90 rounded-xl border border-amber-300 flex flex-col justify-between space-y-2">
+                          <div>
+                            <div className="flex items-center space-x-1 text-[#4A0E17] font-bold text-[11px]">
+                              <Calendar className="w-3.5 h-3.5 text-[#C99B2E] shrink-0" />
+                              <span className="truncate">Événements & Actualités</span>
+                            </div>
+                            <p className="text-[10px] text-slate-600 mt-0.5 line-clamp-2">
+                              Prochains rassemblements, veillées, prédications et annonces officielles.
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-1 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  primaryButtonText: "Voir les Événements",
+                                  primaryButtonLink: "/events-and-news",
+                                });
+                                showToast("Bouton 1 configuré : Événements & Actualités");
+                              }}
+                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-[#C99B2E] hover:bg-amber-400 text-[#4A0E17] transition text-center cursor-pointer shadow-xs"
+                            >
+                              Bouton 1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  secondaryButtonText: "Événements & Actualités",
+                                  secondaryButtonLink: "/events-and-news",
+                                });
+                                showToast("Bouton 2 configuré : Événements & Actualités");
+                              }}
+                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-white hover:bg-amber-100 text-[#4A0E17] border border-amber-300 transition text-center cursor-pointer"
+                            >
+                              Bouton 2
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Option 2: Finances & Dons */}
+                        <div className="p-2.5 bg-emerald-50/90 rounded-xl border border-emerald-300 flex flex-col justify-between space-y-2">
+                          <div>
+                            <div className="flex items-center space-x-1 text-emerald-950 font-bold text-[11px]">
+                              <DollarSign className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                              <span className="truncate">Dîmes & Offrandes</span>
+                            </div>
+                            <p className="text-[10px] text-emerald-800 mt-0.5 line-clamp-2">
+                              Dons par Orange Money, MTN MoMo et comptes bancaires paroissiaux.
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-1 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  primaryButtonText: "Donner en Ligne",
+                                  primaryButtonLink: "/finances",
+                                });
+                                showToast("Bouton 1 configuré : Dîmes & Offrandes");
+                              }}
+                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white transition text-center cursor-pointer shadow-xs"
+                            >
+                              Bouton 1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  secondaryButtonText: "Donner en Ligne",
+                                  secondaryButtonLink: "/finances",
+                                });
+                                showToast("Bouton 2 configuré : Dîmes & Offrandes");
+                              }}
+                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition text-center cursor-pointer"
+                            >
+                              Bouton 2
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Option 3: Inscription Institut Biblique */}
                         <div className="p-2.5 bg-purple-50/80 rounded-xl border border-purple-200 flex flex-col justify-between space-y-2">
                           <div>
                             <div className="flex items-center space-x-1 text-purple-900 font-bold text-[11px]">
                               <GraduationCap className="w-3.5 h-3.5 text-purple-700 shrink-0" />
-                              <span className="truncate">Institut Biblique Parakletos</span>
+                              <span className="truncate">Institut Parakletos</span>
                             </div>
                             <p className="text-[10px] text-purple-700/90 mt-0.5 line-clamp-2">
-                              Lien direct vers l'inscription et la candidature en ligne.
+                              Candidature, inscription pastorale et théologique en ligne.
                             </p>
                           </div>
                           <div className="flex items-center space-x-1 pt-1">
@@ -980,9 +1161,9 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                                   primaryButtonText: "S'inscrire à l'Institut",
                                   primaryButtonLink: "/parakletos#adhesion",
                                 });
-                                showToast("Bouton principal configuré : Inscription Institut");
+                                showToast("Bouton 1 configuré : Inscription Institut");
                               }}
-                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 text-white transition text-center cursor-pointer"
+                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 text-white transition text-center cursor-pointer shadow-xs"
                             >
                               Bouton 1
                             </button>
@@ -994,7 +1175,7 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                                   secondaryButtonText: "S'inscrire à l'Institut",
                                   secondaryButtonLink: "/parakletos#adhesion",
                                 });
-                                showToast("Bouton secondaire configuré : Inscription Institut");
+                                showToast("Bouton 2 configuré : Inscription Institut");
                               }}
                               className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-white hover:bg-purple-100 text-purple-800 border border-purple-300 transition text-center cursor-pointer"
                             >
@@ -1003,15 +1184,15 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Option 2: Cellules de Prière */}
-                        <div className="p-2.5 bg-emerald-50/80 rounded-xl border border-emerald-200 flex flex-col justify-between space-y-2">
+                        {/* Option 4: Requête de Prière & Intercession */}
+                        <div className="p-2.5 bg-rose-50/80 rounded-xl border border-rose-200 flex flex-col justify-between space-y-2">
                           <div>
-                            <div className="flex items-center space-x-1 text-emerald-900 font-bold text-[11px]">
-                              <Users className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                              <span className="truncate">Cellules de Prière de Maison</span>
+                            <div className="flex items-center space-x-1 text-rose-950 font-bold text-[11px]">
+                              <Heart className="w-3.5 h-3.5 text-[#6E1325] shrink-0" />
+                              <span className="truncate">Requête de Prière</span>
                             </div>
-                            <p className="text-[10px] text-emerald-700/90 mt-0.5 line-clamp-2">
-                              Cellules dans les quartiers de Sangmelima (Akon, Bitom...).
+                            <p className="text-[10px] text-rose-800 mt-0.5 line-clamp-2">
+                              Soutien pastoral direct et intercession pour les malades et familles.
                             </p>
                           </div>
                           <div className="flex items-center space-x-1 pt-1">
@@ -1020,12 +1201,12 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                               onClick={() => {
                                 setFormData({
                                   ...formData,
-                                  primaryButtonText: "Cellules de Prière",
-                                  primaryButtonLink: "/home-cells",
+                                  primaryButtonText: "Déposer une Prière",
+                                  primaryButtonLink: "/prayer-requests",
                                 });
-                                showToast("Bouton principal configuré : Cellules de Prière");
+                                showToast("Bouton 1 configuré : Requête de Prière");
                               }}
-                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white transition text-center cursor-pointer"
+                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-[#4A0E17] hover:bg-[#6E1325] text-white transition text-center cursor-pointer shadow-xs"
                             >
                               Bouton 1
                             </button>
@@ -1034,55 +1215,12 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
                               onClick={() => {
                                 setFormData({
                                   ...formData,
-                                  secondaryButtonText: "Cellules de Prière",
-                                  secondaryButtonLink: "/home-cells",
+                                  secondaryButtonText: "Déposer une Prière",
+                                  secondaryButtonLink: "/prayer-requests",
                                 });
-                                showToast("Bouton secondaire configuré : Cellules de Prière");
+                                showToast("Bouton 2 configuré : Requête de Prière");
                               }}
-                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition text-center cursor-pointer"
-                            >
-                              Bouton 2
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Option 3: Ressources & Documents */}
-                        <div className="p-2.5 bg-blue-50/80 rounded-xl border border-blue-200 flex flex-col justify-between space-y-2">
-                          <div>
-                            <div className="flex items-center space-x-1 text-blue-900 font-bold text-[11px]">
-                              <BookOpen className="w-3.5 h-3.5 text-blue-700 shrink-0" />
-                              <span className="truncate">Ressources & Guides de Prière</span>
-                            </div>
-                            <p className="text-[10px] text-blue-700/90 mt-0.5 line-clamp-2">
-                              Téléchargements, fiches d'étude biblique et manuels de foi.
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-1 pt-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFormData({
-                                  ...formData,
-                                  primaryButtonText: "Guides & Ressources",
-                                  primaryButtonLink: "/resources",
-                                });
-                                showToast("Bouton principal configuré : Ressources");
-                              }}
-                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-[#6E1325] hover:bg-blue-900 text-white transition text-center cursor-pointer"
-                            >
-                              Bouton 1
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFormData({
-                                  ...formData,
-                                  secondaryButtonText: "Guides & Ressources",
-                                  secondaryButtonLink: "/resources",
-                                });
-                                showToast("Bouton secondaire configuré : Ressources");
-                              }}
-                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-white hover:bg-blue-100 text-[#6E1325] border border-blue-300 transition text-center cursor-pointer"
+                              className="flex-1 text-[9px] font-bold py-1 px-1.5 rounded-lg bg-white hover:bg-rose-100 text-[#4A0E17] border border-rose-300 transition text-center cursor-pointer"
                             >
                               Bouton 2
                             </button>
@@ -1093,98 +1231,198 @@ export const ManageCarouselModal: React.FC<ManageCarouselModalProps> = ({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Primary Button */}
-                      <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
-                        <label className="block font-black text-xs text-[#4A0E17]">
-                          Bouton Principal (Action Principale)
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.primaryButtonText || ''}
-                          onChange={(e) => setFormData({ ...formData, primaryButtonText: e.target.value })}
-                          placeholder="Texte du bouton : S'inscrire à l'Institut, Cellules..."
-                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
-                        />
-                        <input
-                          type="text"
-                          value={formData.primaryButtonLink || ''}
-                          onChange={(e) => setFormData({ ...formData, primaryButtonLink: e.target.value })}
-                          placeholder="Lien : /parakletos#adhesion, /home-cells, /resources..."
-                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-white"
-                        />
-                        {/* Destination suggestions */}
-                        <div className="pt-1.5 space-y-1">
-                          <span className="text-[10px] text-slate-500 font-bold block">Toutes les propositions :</span>
-                          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
-                            {LINK_PRESETS.map((p) => (
-                              <button
-                                key={p.value}
-                                type="button"
-                                onClick={() => {
-                                  setFormData({
-                                    ...formData,
-                                    primaryButtonText: formData.primaryButtonText || p.suggestedButtonText,
-                                    primaryButtonLink: p.value,
-                                  });
-                                }}
-                                className={`text-[9px] px-2 py-0.5 rounded-md border transition cursor-pointer ${
-                                  formData.primaryButtonLink === p.value
-                                    ? 'bg-[#4A0E17] text-white border-[#4A0E17]'
-                                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
-                                }`}
-                                title={`${p.label} (${p.value})`}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
+                      <div className="space-y-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <label className="block font-black text-xs text-[#4A0E17]">
+                            Bouton Principal (Action Majeure)
+                          </label>
+                          <span className="text-[10px] bg-[#C99B2E] text-[#4A0E17] font-black px-1.5 py-0.5 rounded">
+                            Bouton 1 (Doré)
+                          </span>
+                        </div>
+
+                        {/* Quick destination select dropdown */}
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                            ⚡ Sélectionner un service ou une page de l'église :
+                          </label>
+                          <select
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (!val) return;
+                              const match = LINK_PRESETS.find((p) => p.value === val);
+                              if (match) {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  primaryButtonLink: match.value,
+                                  primaryButtonText: prev.primaryButtonText ? prev.primaryButtonText : match.suggestedButtonText,
+                                }));
+                                showToast(`Destination configurée : ${match.label}`);
+                              }
+                            }}
+                            className="w-full px-2.5 py-1.5 border border-[#C99B2E]/60 rounded-lg text-xs bg-white font-bold text-[#4A0E17] cursor-pointer"
+                            defaultValue=""
+                          >
+                            <option value="">-- Choisir une redirection directe --</option>
+                            <optgroup label="Événements, Actualités & Enseignements">
+                              <option value="/events-and-news">📅 Tous les Événements & Actualités (/events-and-news)</option>
+                              <option value="/events-and-news#events">🔥 Prochains Grands Événements & Veillées</option>
+                              <option value="/events-and-news#teachings">📖 Enseignements & Prédications</option>
+                              <option value="/events-and-news#news">📢 Annonces & Nouvelles de l'Église</option>
+                            </optgroup>
+                            <optgroup label="Finances, Dîmes & Offrandes">
+                              <option value="/finances">💳 Dîmes, Offrandes & Libéralités (/finances)</option>
+                              <option value="/finances#accounts">🏦 Comptes Bancaires & Mobile Money</option>
+                            </optgroup>
+                            <optgroup label="Prière, Cellules & Communion">
+                              <option value="/prayer-requests">🙏 Déposer une Requête de Prière (/prayer-requests)</option>
+                              <option value="/home-cells">🏡 Cellules de Prière de Maison (/home-cells)</option>
+                              <option value="/forum">💬 Forum Chrétien & Partages (/forum)</option>
+                            </optgroup>
+                            <optgroup label="Institut Biblique Parakletos">
+                              <option value="/parakletos#adhesion">🎓 Inscription Institut Biblique</option>
+                              <option value="/parakletos">🏫 Présentation Institut Parakletos</option>
+                              <option value="/parakletos#code-access">📋 Espace Étudiants & Notes</option>
+                            </optgroup>
+                            <optgroup label="Cultes & Rassemblements">
+                              <option value="#services">⛪ Rendez-vous & Cultes au Temple</option>
+                              <option value="/media-gallery">🎬 Médiathèque Complète (Photos & Vidéos)</option>
+                              <option value="#dernier-culte">📹 Vidéos du Dernier Culte</option>
+                              <option value="#testimonials">🙌 Témoignages des Fidèles</option>
+                              <option value="#about">🏛️ Présentation de l'Église d'Akon</option>
+                              <option value="/register">🤝 S'inscrire / Rejoindre la Paroisse</option>
+                            </optgroup>
+                            <optgroup label="Ressources & Bibliothèque">
+                              <option value="/resources">📚 Bibliothèque & Fichiers PDF (/resources)</option>
+                              <option value="/resources?cat=PRIERE">🕯️ Guides de Prière & Jeûne</option>
+                              <option value="/resources?cat=ETUDE_BIBLIQUE">📜 Études Bibliques Complètes</option>
+                              <option value="#verse">🕊️ Verset du Jour & Méditation</option>
+                            </optgroup>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                            Texte affiché sur le bouton :
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.primaryButtonText || ''}
+                            onChange={(e) => setFormData({ ...formData, primaryButtonText: e.target.value })}
+                            placeholder="Ex: Voir les Événements, Donner en Ligne..."
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                            Lien de destination (URL ou /page) :
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.primaryButtonLink || ''}
+                            onChange={(e) => setFormData({ ...formData, primaryButtonLink: e.target.value })}
+                            placeholder="Ex: /events-and-news, /finances, #services..."
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-white text-[#4A0E17]"
+                          />
                         </div>
                       </div>
 
                       {/* Secondary Button */}
-                      <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
-                        <label className="block font-black text-xs text-[#4A0E17]">
-                          Bouton Secondaire (Action Alternative)
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.secondaryButtonText || ''}
-                          onChange={(e) => setFormData({ ...formData, secondaryButtonText: e.target.value })}
-                          placeholder="Texte du bouton : Ressources, Cellules de Prière..."
-                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
-                        />
-                        <input
-                          type="text"
-                          value={formData.secondaryButtonLink || ''}
-                          onChange={(e) => setFormData({ ...formData, secondaryButtonLink: e.target.value })}
-                          placeholder="Lien : /resources, /home-cells, #services..."
-                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-white"
-                        />
-                        {/* Destination suggestions */}
-                        <div className="pt-1.5 space-y-1">
-                          <span className="text-[10px] text-slate-500 font-bold block">Toutes les propositions :</span>
-                          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
-                            {LINK_PRESETS.map((p) => (
-                              <button
-                                key={p.value}
-                                type="button"
-                                onClick={() => {
-                                  setFormData({
-                                    ...formData,
-                                    secondaryButtonText: formData.secondaryButtonText || p.suggestedButtonText,
-                                    secondaryButtonLink: p.value,
-                                  });
-                                }}
-                                className={`text-[9px] px-2 py-0.5 rounded-md border transition cursor-pointer ${
-                                  formData.secondaryButtonLink === p.value
-                                    ? 'bg-[#6E1325] text-white border-[#6E1325]'
-                                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
-                                }`}
-                                title={`${p.label} (${p.value})`}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
+                      <div className="space-y-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <label className="block font-black text-xs text-[#4A0E17]">
+                            Bouton Secondaire (Action Alternative)
+                          </label>
+                          <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 rounded">
+                            Bouton 2 (Clair / Verre)
+                          </span>
+                        </div>
+
+                        {/* Quick destination select dropdown */}
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                            ⚡ Sélectionner un service ou une page de l'église :
+                          </label>
+                          <select
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (!val) return;
+                              const match = LINK_PRESETS.find((p) => p.value === val);
+                              if (match) {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  secondaryButtonLink: match.value,
+                                  secondaryButtonText: prev.secondaryButtonText ? prev.secondaryButtonText : match.suggestedButtonText,
+                                }));
+                                showToast(`Destination secondaire : ${match.label}`);
+                              }
+                            }}
+                            className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-bold text-[#4A0E17] cursor-pointer"
+                            defaultValue=""
+                          >
+                            <option value="">-- Choisir une redirection directe --</option>
+                            <optgroup label="Événements, Actualités & Enseignements">
+                              <option value="/events-and-news">📅 Tous les Événements & Actualités (/events-and-news)</option>
+                              <option value="/events-and-news#events">🔥 Prochains Grands Événements & Veillées</option>
+                              <option value="/events-and-news#teachings">📖 Enseignements & Prédications</option>
+                              <option value="/events-and-news#news">📢 Annonces & Nouvelles de l'Église</option>
+                            </optgroup>
+                            <optgroup label="Finances, Dîmes & Offrandes">
+                              <option value="/finances">💳 Dîmes, Offrandes & Libéralités (/finances)</option>
+                              <option value="/finances#accounts">🏦 Comptes Bancaires & Mobile Money</option>
+                            </optgroup>
+                            <optgroup label="Prière, Cellules & Communion">
+                              <option value="/prayer-requests">🙏 Déposer une Requête de Prière (/prayer-requests)</option>
+                              <option value="/home-cells">🏡 Cellules de Prière de Maison (/home-cells)</option>
+                              <option value="/forum">💬 Forum Chrétien & Partages (/forum)</option>
+                            </optgroup>
+                            <optgroup label="Institut Biblique Parakletos">
+                              <option value="/parakletos#adhesion">🎓 Inscription Institut Biblique</option>
+                              <option value="/parakletos">🏫 Présentation Institut Parakletos</option>
+                              <option value="/parakletos#code-access">📋 Espace Étudiants & Notes</option>
+                            </optgroup>
+                            <optgroup label="Cultes & Rassemblements">
+                              <option value="#services">⛪ Rendez-vous & Cultes au Temple</option>
+                              <option value="/media-gallery">🎬 Médiathèque Complète (Photos & Vidéos)</option>
+                              <option value="#dernier-culte">📹 Vidéos du Dernier Culte</option>
+                              <option value="#testimonials">🙌 Témoignages des Fidèles</option>
+                              <option value="#about">🏛️ Présentation de l'Église d'Akon</option>
+                              <option value="/register">🤝 S'inscrire / Rejoindre la Paroisse</option>
+                            </optgroup>
+                            <optgroup label="Ressources & Bibliothèque">
+                              <option value="/resources">📚 Bibliothèque & Fichiers PDF (/resources)</option>
+                              <option value="/resources?cat=PRIERE">🕯️ Guides de Prière & Jeûne</option>
+                              <option value="/resources?cat=ETUDE_BIBLIQUE">📜 Études Bibliques Complètes</option>
+                              <option value="#verse">🕊️ Verset du Jour & Méditation</option>
+                            </optgroup>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                            Texte affiché sur le bouton :
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.secondaryButtonText || ''}
+                            onChange={(e) => setFormData({ ...formData, secondaryButtonText: e.target.value })}
+                            placeholder="Ex: Médias du Culte, Cellules de Prière..."
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                            Lien de destination (URL ou /page) :
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.secondaryButtonLink || ''}
+                            onChange={(e) => setFormData({ ...formData, secondaryButtonLink: e.target.value })}
+                            placeholder="Ex: #dernier-culte, /resources, /prayer-requests..."
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-white text-[#4A0E17]"
+                          />
                         </div>
                       </div>
                     </div>

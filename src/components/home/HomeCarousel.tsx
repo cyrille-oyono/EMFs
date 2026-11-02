@@ -109,10 +109,86 @@ export const HomeCarousel: React.FC<HomeCarouselProps> = ({
   };
 
   if (!displaySlides || displaySlides.length === 0) {
-    return null;
+    if (isAdmin) {
+      return (
+        <div className="relative w-full overflow-hidden bg-gradient-to-br from-[#1E060A] via-[#4A0E17] to-[#2B070E] text-white py-16 sm:py-24 px-4 sm:px-8 border-b border-[#C99B2E]/40 select-none">
+          <div className="max-w-4xl mx-auto text-center space-y-6">
+            <div className="inline-flex items-center space-x-2 bg-[#C99B2E] text-[#4A0E17] px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg">
+              <Sparkles className="w-4 h-4 text-[#4A0E17]" />
+              <span>Configuration du Carrousel d'Accueil • Espace Admin</span>
+            </div>
+
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight drop-shadow-md text-white">
+              Carrousel de la Page d'Accueil
+            </h1>
+
+            <p className="text-sm sm:text-lg text-slate-200 max-w-2xl mx-auto leading-relaxed">
+              Aucune diapositive n'est encore configurée. Ajoutez vos photos de culte, grands titres inspirants et boutons redirigeant directement vers les pages et services de l'église (Événements & Actualités, Dîmes, Requêtes de Prière, Institut Parakletos...).
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+              <button
+                type="button"
+                onClick={() => onOpenManageModal && onOpenManageModal(true)}
+                className="px-6 py-3.5 rounded-xl bg-[#C99B2E] text-[#4A0E17] font-black text-sm hover:bg-amber-400 transition shadow-xl flex items-center space-x-2 cursor-pointer transform hover:-translate-y-0.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Ajouter une Diapositive au Carrousel</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onOpenManageModal && onOpenManageModal(false)}
+                className="px-6 py-3.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-sm transition border border-white/30 backdrop-blur-md flex items-center space-x-2 cursor-pointer"
+              >
+                <Edit2 className="w-4 h-4 text-[#C99B2E]" />
+                <span>Gérer les Diapositives</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Default welcoming hero for public visitors when no custom slide is configured yet
+    return (
+      <div className="relative w-full overflow-hidden bg-gradient-to-br from-[#1E060A] via-[#4A0E17] to-[#2B070E] text-white py-20 sm:py-28 px-4 sm:px-8 border-b border-[#C99B2E]/30 select-none">
+        <div className="max-w-4xl mx-auto text-center space-y-6">
+          <div className="inline-flex items-center space-x-2 bg-[#C99B2E] text-[#4A0E17] px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg">
+            <Sparkles className="w-4 h-4 text-[#4A0E17]" />
+            <span>Bienvenue à l'Église Missionnaire de la Foi</span>
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white drop-shadow-md">
+            Un Sanctuaire de Prière, de Foi & de Victoire
+          </h1>
+
+          <p className="text-sm sm:text-xl text-slate-200 max-w-2xl mx-auto leading-relaxed font-light">
+            Rejoignez notre assemblée à Akon, Sangmelima. Venez expérimenter la puissance transformatrice de la Parole de Dieu, la louange fervente et la délivrance.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+            <button
+              onClick={() => handleButtonClick('#services')}
+              className="px-6 py-3.5 rounded-xl bg-[#C99B2E] text-[#4A0E17] font-black text-xs sm:text-sm hover:bg-amber-400 transition shadow-xl flex items-center space-x-2 cursor-pointer transform hover:-translate-y-0.5"
+            >
+              <span>Découvrir nos Cultes</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => handleButtonClick('/events-and-news')}
+              className="px-6 py-3.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs sm:text-sm transition border border-white/30 backdrop-blur-md cursor-pointer transform hover:-translate-y-0.5"
+            >
+              Événements & Actualités
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  const currentSlide = displaySlides[currentIndex] || displaySlides[0] || INITIAL_CAROUSEL_SLIDES[0];
+  const currentSlide = displaySlides[currentIndex] || displaySlides[0];
   if (!currentSlide) return null;
 
   return (

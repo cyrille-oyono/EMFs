@@ -510,12 +510,25 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
             </button>
           )}
           {(currentUser?.role === 'ADMIN' || currentUser?.role === 'PASTEUR') && (
-            <button
-              onClick={onGoToCMS}
-              className="text-xs bg-[#C99B2E] text-[#4A0E17] font-bold px-2.5 py-0.5 rounded hover:bg-amber-400 transition cursor-pointer"
-            >
-              Éditer via le CMS
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  setCarouselModalCreateMode(false);
+                  setIsManageCarouselOpen(true);
+                }}
+                className="text-xs bg-amber-400/90 hover:bg-amber-300 text-[#4A0E17] font-bold px-2.5 py-0.5 rounded transition cursor-pointer flex items-center space-x-1 shadow-xs"
+                title="Configurer les photos, titres et liens du carrousel d'accueil"
+              >
+                <Sparkles className="w-3 h-3 text-[#4A0E17]" />
+                <span>Carrousel</span>
+              </button>
+              <button
+                onClick={onGoToCMS}
+                className="text-xs bg-[#C99B2E] text-[#4A0E17] font-bold px-2.5 py-0.5 rounded hover:bg-amber-400 transition cursor-pointer"
+              >
+                Éditer via le CMS
+              </button>
+            </>
           )}
           {currentUser ? (
             <div className="flex items-center space-x-2">
