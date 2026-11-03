@@ -1,5 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
+  User,
+  Role,
+  Permission,
   SystemSettings,
   LatestServiceMedia,
   HomepageCMSState,
@@ -107,7 +110,128 @@ async function safeSupabaseFetch(input: RequestInfo | URL, init?: RequestInit): 
   }
 }
 
-// Initialisation sécurisée du client Supabase
+/**
+ * Adaptateur de stockage personnalisé conforme à l'interface SupportedStorage de @supabase/supabase-js
+ * Remplace totalement localStorage par des Cookies sécurisés (SameSite=Lax, Secure sur HTTPS, Path=/).
+ * Résout la vulnérabilité de vol de jetons dans localStorage et la perte de session sur F5 / fermeture de sessionStorage.
+ */
+export const cookieStorageAdapter = {
+  getItem: (key: string): string | null => {
+    if (typeof document === 'undefined') return null;
+    const name = encodeURIComponent(key) + '=';
+    const decodedCookie = document.cookie;
+    const ca = decodedCookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i].trim();
+      if (c.indexOf(name) === 0) {
+        const raw = c.substring(name.length);
+        try {
+          return decodeURIComponent(raw);
+        } catch {
+          return raw;
+        }
+      }
+    }
+    return null;
+  },
+
+  setItem: (key: string, value: string): void => {
+    if (typeof document === 'undefined') return;
+    // Persistance sécurisée pendant 14 jours
+    const maxAge = 60 * 60 * 24 * 14;
+    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    const secureFlag = isHttps ? '; Secure' : '';
+    document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; Max-Age=${maxAge}; Path=/; SameSite=Lax${secureFlag}`;
+  },
+
+  removeItem: (key: string): void => {
+    if (typeof document === 'undefined') return;
+    document.cookie = `${encodeURIComponent(key)}=; Max-Age=0; Path=/; SameSite=Lax`;
+  },
+};
+
+/**
+ * Nettoie tout résidu d'authentification ou jetons sensibles dans localStorage
+ * pour garantir une hygiène de sécurité maximale sans fuite de données d'identification.
+ */
+export function purgeAllLocalStorageAuth(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && (k.startsWith('sb-') || k.includes('auth-token') || k === 'EMF_AUTH_USER' || k.includes('session'))) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach((k) => window.localStorage.removeItem(k));
+  } catch (e) {
+    console.warn('Notice purge localStorage:', e);
+  }
+}
+
+/**
+ * Enregistre la session utilisateur active dans un cookie sécurisé (sans localStorage)
+ */
+export function setSecureUserSession(user: User): void {
+  if (typeof document === 'undefined' || !user) return;
+  try {
+    const sessionData = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      permissions: user.permissions || [],
+      savedAt: Date.now(),
+    };
+    cookieStorageAdapter.setItem('EMF_SECURE_SESSION', JSON.stringify(sessionData));
+    purgeAllLocalStorageAuth();
+  } catch (e) {
+    console.warn('Notice setSecureUserSession:', e);
+  }
+}
+
+/**
+ * Récupère les métadonnées de la session utilisateur active depuis les cookies sécurisés
+ */
+export function getSecureUserSession(): {
+  id: string;
+  email: string;
+  role: Role;
+  firstName: string;
+  lastName: string;
+  permissions: Permission[];
+} | null {
+  try {
+    const raw = cookieStorageAdapter.getItem('EMF_SECURE_SESSION');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.id && parsed.email && parsed.role) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Supprime la session utilisateur active des cookies (lors de la déconnexion)
+ */
+export function clearSecureUserSession(): void {
+  try {
+    cookieStorageAdapter.removeItem('EMF_SECURE_SESSION');
+    purgeAllLocalStorageAuth();
+  } catch {}
+}
+
+/**
+ * Table des profils utilisateurs dans Supabase
+ */
+export const USER_PROFILES_TABLE = 'user_profiles';
+
+// Initialisation sécurisée du client Supabase avec adaptateur de Cookies sécurisés
 let supabaseInstance: SupabaseClient | null = null;
 
 export function getSupabaseClient(): SupabaseClient | null {
@@ -118,8 +242,10 @@ export function getSupabaseClient(): SupabaseClient | null {
     try {
       supabaseInstance = createClient(envUrl, envKey, {
         auth: {
+          storage: cookieStorageAdapter,
           persistSession: true,
           autoRefreshToken: true,
+          detectSessionInUrl: false,
         },
         global: {
           fetch: safeSupabaseFetch,
@@ -575,6 +701,114 @@ export function subscribeToAppContent(
     console.warn('Supabase: Erreur souscription temps réel app_content:', err);
     return () => {};
   }
+}
+
+/**
+ * ========================================================
+ * PERSISTANCE DES PROFILS UTILISATEURS DANS SUPABASE
+ * ========================================================
+ */
+
+/**
+ * Enregistre le profil d'un utilisateur directement dans une table Supabase (et dans app_content)
+ * Évite le stockage de données utilisateur sensibles dans le navigateur.
+ */
+export async function saveUserProfileToSupabase(user: User): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, error: 'Supabase n’est pas configuré' };
+  }
+
+  try {
+    const profilePayload = {
+      id: user.id,
+      email: user.email,
+      first_name: user.firstName,
+      last_name: user.lastName,
+      role: user.role,
+      permissions: user.permissions || [],
+      phone: user.phone || null,
+      status: user.status || 'ACTIF',
+      avatar_url: user.avatarUrl || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    // 1. Sauvegarde dans app_content maîtresse pour persistance garantie
+    await saveAppContent(`user_profile_${user.id}`, profilePayload);
+
+    // 2. Sauvegarde dans la table user_profiles
+    try {
+      await client.from(USER_PROFILES_TABLE).upsert(profilePayload, { onConflict: 'id' });
+    } catch {
+      // Ignorer si la table user_profiles n'est pas encore créée
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.warn('saveUserProfileToSupabase error:', err);
+    return { success: false, error: err?.message || 'Erreur lors de la sauvegarde du profil' };
+  }
+}
+
+/**
+ * Récupère le profil d'un utilisateur directement depuis Supabase au démarrage (F5)
+ */
+export async function getUserProfileFromSupabase(userIdOrEmail: string): Promise<User | null> {
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  return withTimeout(
+    (async () => {
+      try {
+        // 1. Tentative depuis app_content (clé individuelle)
+        const cached = await getAppContent<any>(`user_profile_${userIdOrEmail}`);
+        if (cached && (cached.id || cached.email)) {
+          return {
+            id: cached.id || userIdOrEmail,
+            email: cached.email,
+            firstName: cached.first_name || cached.firstName || '',
+            lastName: cached.last_name || cached.lastName || '',
+            role: cached.role || 'MEMBRE',
+            permissions: cached.permissions || [],
+            phone: cached.phone,
+            avatarUrl: cached.avatar_url || cached.avatarUrl,
+            status: cached.status || 'ACTIF',
+            createdAt: cached.created_at || cached.createdAt || new Date().toISOString(),
+            updatedAt: cached.updated_at || cached.updatedAt || new Date().toISOString(),
+          } as User;
+        }
+
+        // 2. Tentative depuis la table user_profiles
+        try {
+          const query = client.from(USER_PROFILES_TABLE).select('*');
+          const isEmail = userIdOrEmail.includes('@');
+          const { data } = await (isEmail ? query.eq('email', userIdOrEmail) : query.eq('id', userIdOrEmail)).maybeSingle();
+          if (data) {
+            return {
+              id: data.id,
+              email: data.email,
+              firstName: data.first_name || '',
+              lastName: data.last_name || '',
+              role: data.role || 'MEMBRE',
+              permissions: data.permissions || [],
+              phone: data.phone,
+              avatarUrl: data.avatar_url,
+              status: data.status || 'ACTIF',
+              createdAt: data.created_at || new Date().toISOString(),
+              updatedAt: data.updated_at || new Date().toISOString(),
+            } as User;
+          }
+        } catch {}
+
+        return null;
+      } catch (err) {
+        console.warn('getUserProfileFromSupabase exception:', err);
+        return null;
+      }
+    })(),
+    2500,
+    null
+  );
 }
 
 /**

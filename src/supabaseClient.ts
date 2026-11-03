@@ -29,12 +29,18 @@ const supabaseAnonKey =
   getEnvVar('SUPABASE_ANON_KEY') ||
   'sb_publishable_dHeTb1557Tlo9tJSQCgR4w_PKN_a3P6';
 
+import { cookieStorageAdapter, getSupabaseClient } from './services/supabase';
+
 // Création sécurisée avec fallback mock pour éviter tout crash au démarrage
 function createSafeSupabaseClient(): SupabaseClient {
   try {
+    const existing = getSupabaseClient();
+    if (existing) return existing;
+
     if (supabaseUrl && supabaseAnonKey && (supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://'))) {
       return createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
+          storage: cookieStorageAdapter,
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: false,

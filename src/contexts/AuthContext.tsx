@@ -2,7 +2,17 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Role, Permission, SystemSettings } from '../types';
 import { apiClient } from '../services/apiClient';
 import { churchSyncService } from '../services/churchSyncService';
-import { isSupabaseConfigured, subscribeToChurchSettings } from '../services/supabase';
+import {
+  isSupabaseConfigured,
+  subscribeToChurchSettings,
+  getSupabaseClient,
+  setSecureUserSession,
+  getSecureUserSession,
+  clearSecureUserSession,
+  purgeAllLocalStorageAuth,
+  saveUserProfileToSupabase,
+  getUserProfileFromSupabase,
+} from '../services/supabase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -75,39 +85,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
 
-    // Sécurité absolue : garantir que l'interface s'affiche en moins de 1.2s même en cas de panne réseau
+    // Sécurité de déblocage maximale de l'interface en cas de lenteur réseau
     const safetyTimer = setTimeout(() => {
       if (isMounted) {
         setIsLoading(false);
       }
-    }, 1200);
+    }, 2000);
 
     const init = async () => {
       try {
-        // Lecture sécurisée de la session courante (sessionStorage, pas de stockage local persistant)
-        try {
-          if (typeof window !== 'undefined') {
-            // Nettoyage absolu de localStorage pour éliminer tout stockage local persistant
-            if (window.localStorage) {
-              window.localStorage.removeItem('EMF_AUTH_USER');
+        // 1. Purge systématique de tout résidu dans localStorage pour respecter la confidentialité stricte
+        purgeAllLocalStorageAuth();
+
+        let restoredUser: User | null = null;
+        const supabaseClient = getSupabaseClient();
+
+        // 2. Vérification d'une session Supabase Auth active (via Cookies sécurisés, sans localStorage)
+        if (supabaseClient?.auth && typeof supabaseClient.auth.getUser === 'function') {
+          try {
+            const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+            if (!authError && authData?.user) {
+              const sbUser = authData.user;
+              // Récupération du profil complet depuis la table Supabase
+              const remoteProfile = await getUserProfileFromSupabase(sbUser.id || sbUser.email || '');
+              if (remoteProfile) {
+                restoredUser = remoteProfile;
+              }
             }
-            if (window.sessionStorage) {
-              const savedUser = window.sessionStorage.getItem('EMF_AUTH_USER');
-              if (savedUser) {
-                const parsed = JSON.parse(savedUser);
-                if (parsed && typeof parsed === 'object') {
-                  setCurrentUser(parsed);
+          } catch (e) {
+            console.warn('Note vérification Supabase Auth:', e);
+          }
+        }
+
+        // 3. Si non trouvé via Supabase Auth direct, lecture du Cookie de session sécurisé (survit au F5)
+        if (!restoredUser) {
+          const cookieSession = getSecureUserSession();
+          if (cookieSession && cookieSession.id) {
+            // A. Tentative de rafraîchissement depuis Supabase
+            const remoteProfile = await getUserProfileFromSupabase(cookieSession.id);
+            if (remoteProfile) {
+              restoredUser = remoteProfile;
+            } else {
+              // B. Fallback sur la base paroissiale synchronisée
+              try {
+                const users = await apiClient.getUsers();
+                const matched = users.find(
+                  (u) => u.id === cookieSession.id || u.email.toLowerCase() === cookieSession.email.toLowerCase()
+                );
+                if (matched) {
+                  restoredUser = matched;
+                } else {
+                  restoredUser = {
+                    id: cookieSession.id,
+                    email: cookieSession.email,
+                    firstName: cookieSession.firstName || 'Utilisateur',
+                    lastName: cookieSession.lastName || '',
+                    role: cookieSession.role || 'MEMBRE',
+                    permissions: cookieSession.permissions || [],
+                    status: 'ACTIF',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  };
                 }
+              } catch {
+                restoredUser = {
+                  id: cookieSession.id,
+                  email: cookieSession.email,
+                  firstName: cookieSession.firstName || 'Utilisateur',
+                  lastName: cookieSession.lastName || '',
+                  role: cookieSession.role || 'MEMBRE',
+                  permissions: cookieSession.permissions || [],
+                  status: 'ACTIF',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                };
               }
             }
           }
-        } catch (localErr) {
-          console.warn('Erreur lecture session:', localErr);
         }
 
-        // Récupération des paramètres avec fallback immédiat
+        if (isMounted && restoredUser) {
+          setCurrentUser(restoredUser);
+          setSecureUserSession(restoredUser);
+        }
+
+        // 4. Chargement des paramètres du temple
         const loadedSettings = await apiClient.getCurrentSettings().catch((err) => {
-          console.warn('apiClient.getCurrentSettings a échoué, utilisation des paramètres par défaut:', err);
+          console.warn('apiClient.getCurrentSettings a échoué, utilisation des paramètres actuels:', err);
           return null;
         });
 
@@ -132,38 +196,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const safeSetItem = (key: string, val: string) => {
-    try {
-      if (typeof window !== 'undefined') {
-        if (window.sessionStorage) {
-          window.sessionStorage.setItem(key, val);
-        }
-        if (window.localStorage) {
-          window.localStorage.removeItem(key);
-        }
-      }
-    } catch {}
-  };
-
-  const safeRemoveItem = (key: string) => {
-    try {
-      if (typeof window !== 'undefined') {
-        if (window.sessionStorage) {
-          window.sessionStorage.removeItem(key);
-        }
-        if (window.localStorage) {
-          window.localStorage.removeItem(key);
-        }
-      }
-    } catch {}
-  };
-
   const login = async (email: string, password: string) => {
     try {
       const res = await apiClient.login(email, password);
       if (res.success && res.user) {
         setCurrentUser(res.user);
-        safeSetItem('EMF_AUTH_USER', JSON.stringify(res.user));
+        // Persistance sécurisée par Cookies et dans la table Supabase (zéro localStorage)
+        setSecureUserSession(res.user);
+        saveUserProfileToSupabase(res.user).catch((e) => console.warn('Sync profile Supabase:', e));
         return { success: true };
       }
       return { success: false, error: res.error || 'Connexion échouée' };
@@ -184,7 +224,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await apiClient.register(data);
       if (res.success && res.user) {
         setCurrentUser(res.user);
-        safeSetItem('EMF_AUTH_USER', JSON.stringify(res.user));
+        // Persistance sécurisée par Cookies et dans Supabase
+        setSecureUserSession(res.user);
+        saveUserProfileToSupabase(res.user).catch((e) => console.warn('Sync profile Supabase:', e));
         return { success: true, user: res.user };
       }
       return { success: false, error: res.error || "Erreur lors de l'inscription" };
@@ -199,7 +241,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const target = users.find((u) => u.role === role);
       if (target) {
         setCurrentUser(target);
-        safeSetItem('EMF_AUTH_USER', JSON.stringify(target));
+        setSecureUserSession(target);
+        saveUserProfileToSupabase(target).catch(() => {});
       }
     } catch (err) {
       console.warn('Erreur loginAs:', err);
@@ -208,7 +251,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setCurrentUser(null);
-    safeRemoveItem('EMF_AUTH_USER');
+    clearSecureUserSession();
+    const client = getSupabaseClient();
+    if (client?.auth) {
+      client.auth.signOut().catch(() => {});
+    }
   };
 
   const hasRole = (role: Role | Role[]): boolean => {

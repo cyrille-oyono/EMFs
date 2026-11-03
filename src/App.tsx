@@ -110,33 +110,52 @@ const MainApp: React.FC = () => {
       try {
         if (typeof window !== 'undefined' && window.location.hash) {
           const hash = window.location.hash.replace('#', '').trim();
-          if (hash) setCurrentPage(hash);
+          if (hash && hash !== currentPage) setCurrentPage(hash);
         }
       } catch {}
     };
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
-  }, []);
+  }, [currentPage]);
 
-  // If user role switches or changes and user is not admin or pasteur, ensure they cannot access admin features
+  // Sync hash with current page
   React.useEffect(() => {
-    if (!isLoading || maxWaitExceeded) {
-      if (!isPastorOrAdmin && ['dashboard', 'cms-homepage', 'web-publish', 'settings', 'users', 'audit', 'backups'].includes(currentPage)) {
-        setCurrentPage('public-home');
-      } else if (currentUser?.role !== 'ADMIN' && ['users', 'settings', 'audit', 'backups'].includes(currentPage)) {
-        setCurrentPage(isPastorOrAdmin ? 'dashboard' : 'public-home');
+    try {
+      if (typeof window !== 'undefined' && currentPage) {
+        if (window.location.hash.replace('#', '') !== currentPage) {
+          window.location.hash = currentPage;
+        }
       }
-    }
-  }, [currentUser?.role, currentPage, isLoading, maxWaitExceeded, isPastorOrAdmin]);
+    } catch {}
+  }, [currentPage]);
 
-  // Si le chargement dépasse 1.2s ou si isLoading est false, on affiche TOUJOURS l'interface
+  // Protection des routes administratives : ne s'exécute JAMAIS pendant le chargement (évite l'éjection au F5)
+  React.useEffect(() => {
+    if (isLoading) return;
+
+    if (!isPastorOrAdmin && ['dashboard', 'cms-homepage', 'web-publish', 'settings', 'users', 'audit', 'backups'].includes(currentPage)) {
+      setCurrentPage('public-home');
+    } else if (currentUser?.role !== 'ADMIN' && ['users', 'settings', 'audit', 'backups'].includes(currentPage)) {
+      setCurrentPage(isPastorOrAdmin ? 'dashboard' : 'public-home');
+    }
+  }, [currentUser?.role, currentPage, isLoading, isPastorOrAdmin]);
+
+  // Écran de chargement sécurisé anti-flicker pendant la vérification de session
   if (isLoading && !maxWaitExceeded) {
     return (
-      <div className="min-h-screen bg-[#FCFCFD] flex items-center justify-center font-sans text-slate-800">
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 border-4 border-[#6E1325] border-t-[#C99B2E] rounded-full animate-spin mx-auto" />
-          <h2 className="text-sm font-bold text-[#4A0E17]">EMF SMART — Sangmelima</h2>
-          <p className="text-xs text-slate-400">Chargement de la plateforme paroissiale...</p>
+      <div className="min-h-screen bg-[#FAF0F2] flex items-center justify-center font-sans text-slate-800">
+        <div className="text-center p-8 bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-[#6E1325]/10 max-w-sm w-full mx-4 space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="w-16 h-16 border-4 border-[#6E1325]/20 border-t-[#6E1325] border-r-[#C99B2E] rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center font-serif font-black text-[#6E1325] text-xs">
+              EMF
+            </div>
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-[#4A0E17]">EMF SMART — Sangmelima</h2>
+            <p className="text-xs text-[#C99B2E] font-medium tracking-wide mt-0.5">Grand Temple d'Akon</p>
+          </div>
+          <p className="text-xs text-slate-500 animate-pulse">Vérification de la session sécurisée...</p>
         </div>
       </div>
     );
