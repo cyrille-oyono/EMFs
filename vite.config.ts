@@ -18,13 +18,27 @@ export default defineConfig(() => {
         name: 'realtime-ws-and-storage',
         configureServer(server) {
           if (server.httpServer) {
-            import('./src/server/realtimeServer.ts').then(({ setupWebSocketServer }) => {
-              setupWebSocketServer(server.httpServer as any);
-            }).catch(console.error);
+            try {
+              import('./src/server/realtimeServer.ts')
+                .then(({ setupWebSocketServer }) => {
+                  if (server.httpServer) {
+                    setupWebSocketServer(server.httpServer as any);
+                  }
+                })
+                .catch((e) => {
+                  console.warn('[Vite WS] Setup WebSocket ignoré:', e?.message || e);
+                });
+            } catch (e) {
+              console.warn('[Vite WS] Init exception:', e);
+            }
           }
 
           // Middleware pour persistance disque /api/storage, /api/carousel-slides, et /api/presentation-image
           server.middlewares.use((req, res, next) => {
+            req.on('error', (err) => {
+              console.warn('[Middleware] Request error:', err?.message || err);
+            });
+
             const parsedUrl = req.url ? req.url.split('?')[0] : '';
             const dataDir = path.resolve(__dirname, 'data');
             const databaseFilePath = path.join(dataDir, 'database.json');

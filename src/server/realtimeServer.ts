@@ -11,15 +11,28 @@ interface RealtimeMessage {
 let wssInstance: WebSocketServer | null = null;
 const connectedClients = new Set<WebSocket>();
 
-export function setupWebSocketServer(server: HttpServer): WebSocketServer {
+export function setupWebSocketServer(server: HttpServer): WebSocketServer | null {
   if (wssInstance) {
     return wssInstance;
   }
 
-  const wss = new WebSocketServer({ server, path: '/ws' });
-  wssInstance = wss;
+  try {
+    const wss = new WebSocketServer({ server, path: '/ws' });
+    wssInstance = wss;
 
-  wss.on('connection', (ws: WebSocket, req) => {
+    // Protection essentielle contre le crash du processus en cas d'erreur de socket ou d'upgrade
+    wss.on('error', (err) => {
+      console.warn('[Realtime WSS] Erreur non-bloquante du serveur WebSocket:', err?.message || err);
+    });
+
+    server.on('close', () => {
+      try {
+        wss.close();
+      } catch {}
+      wssInstance = null;
+    });
+
+    wss.on('connection', (ws: WebSocket, req) => {
     connectedClients.add(ws);
     // Send immediate welcome handshake
     ws.send(
@@ -60,7 +73,11 @@ export function setupWebSocketServer(server: HttpServer): WebSocketServer {
     });
   });
 
-  return wss;
+    return wss;
+  } catch (err: any) {
+    console.warn('[Realtime WSS] Impossible d’initialiser WebSocketServer:', err?.message || err);
+    return null;
+  }
 }
 
 export function broadcastRealtimeEvent(type: string, payload: any, senderWs?: WebSocket): void {
